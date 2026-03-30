@@ -1,0 +1,171 @@
+{
+  "seccion_1_informacion_general": {
+    "lugar_fecha": "Centro de operaciones - Planta A, 2026-03-27",
+    "area": "Tanque de almacenamiento 5",
+    "permiso_a": "Equipo de mantenimiento XYZ",
+    "centro_operacion": "Planta Industrial Sur",
+    "tiempo_solicitado": "4 horas",
+    "hora_inicio": "08:00",
+    "hora_fin": "12:00",
+    "duracion_estimada": "4 horas",
+    "descripcion_trabajo": "Inspección interna y limpieza de tuberías",
+    "herramientas": "Escalera, cuerda de rescate, linterna LED, detectores portátiles"
+  },
+  "seccion_2_trabajadores_responsables": [
+    {
+      "nombre": "Mariana Gomez",
+      "identificacion": "12345678",
+      "cargo": "Tecnologia",
+      "estado_salud": true,
+      "firma": "sin_firmar"
+    },
+    {
+      "nombre": "Eduardo Santos",
+      "identificacion": "87654321",
+      "cargo": "Director Tecnologia",
+      "estado_salud": true,
+      "firma": "sin_firmar"
+    }
+  ],
+  "seccion_3_verificacion_diaria": [
+    {
+      "descripcion": "Se diligencia el permiso de manera previa a la actividad",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Se cuenta con un procedimiento de trabajo escrito",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Señalización del área",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Se identifica y evalúan los peligros presentes",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Existencia de medidas de control en el área",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Hay métodos de comunicación entre entrada y exterior",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Equipo de protección personal entregado",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Equipo de rescate disponible y probado",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Permiso autorizado por personal competente",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Trabajador notificado de los peligros",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Plan de rescate está en lugar",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Se informó al personal de emergencia",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Permisos anteriores han sido cancelados",
+      "respuesta": "NA"
+    },
+    {
+      "descripcion": "Se verifica ausencia de sustancias peligrosas",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Ventilación adecuada confirmada",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Atmósfera segura verificada",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Inspección visual del espacio completada",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Procedimiento de entrada conocido por todos",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Equipo de comunicación funcional",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Lista de emergencia disponible",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Jefe de área ha autorizado la entrada",
+      "respuesta": "SI"
+    },
+    {
+      "descripcion": "Registro de entrada/salida disponible",
+      "respuesta": "SI"
+    }
+  ],
+  "seccion_4_informacion_adicional": {
+    "supervisor": "Carlos González López",
+    "vigia": "Pedro Martínez Ruiz",
+    "trabajador_entrante": "Juan Pérez García",
+    "jefe_area": "Roberto Sánchez Silva",
+    "firma_supervisor": "sin_firmar",
+    "firma_vigia": "sin_firmar",
+    "firma_trabajador": "sin_firmar",
+    "firma_jefe": "sin_firmar"
+  },
+  "seccion_5_monitoreo": [
+    {
+      "tipo_medicion": "O2",
+      "resultado": "20.8%",
+      "fecha": "2026-03-27T08:15:00",
+      "estado": "OK"
+    },
+    {
+      "tipo_medicion": "CO",
+      "resultado": "0 ppm",
+      "fecha": "2026-03-27T08:15:00",
+      "estado": "OK"
+    },
+    {
+      "tipo_medicion": "H2S",
+      "resultado": "0 ppm",
+      "fecha": "2026-03-27T08:15:00",
+      "estado": "OK"
+    },
+    {
+      "tipo_medicion": "CH4",
+      "resultado": "0% LEL",
+      "fecha": "2026-03-27T08:15:00",
+      "estado": "OK"
+    }
+  ],
+  "seccion_6_equipos": {
+    "equipos_proteccion": "Casco de seguridad, arnés de rescate, guantes nitrilo, botas antideslizantes, gafas protectoras, respirador media cara N95",
+    "equipos_rescate": "Cuerda de rescate diámetro 12mm (50m), poleas de rescate (2 unidades), camilla de rescate, botiquín de primeros auxilios",
+    "otros": "Linterna LED recargable, detector multi-gas portátil, radio de comunicación (2 unidades), extintor ABC (2 unidades)"
+  },
+  "seccion_final_responsable": {
+    "responsable_nombre": "Ing. Fernando Díaz Morales",
+    "responsable_cedula": "98765432",
+    "firma_responsable": "sin_firmar"
+  },
+  "metadata": {
+    "fecha_generacion": "2026-03-27T13:45:30.000Z",
+    "total_trabajadores": 2,
+    "mediciones": 4
+  }
+}
