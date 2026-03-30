@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const sections = [
@@ -7,10 +6,6 @@ const sections = [
   { step: 2, title: "Trabajadores responsables" },
   { step: 3, title: "Verificación diaria" },
   { step: 4, title: "Información adicional" },
-  { step: 5, title: "Término de responsabilidades" },
-  { step: 6, title: "Monitoreo" },
-  { step: 7, title: "Equipos y autorización" },
-  { step: 8, title: "Aprobación final" },
 ] as const;
 
 type StepNumber = (typeof sections)[number]["step"];
@@ -27,15 +22,6 @@ function calcularDuracion(inicio: string, fin: string) {
 
   return `${valorFormateado} horas`;
 }
-
-const monitoringItems = [
-  "Oxígeno (19.5 a 23.5 %)",
-  "CO (< 25 PPM)",
-  "SO2 (< 2 PPM)",
-  "H2S (< 10 PPM)",
-  "Inflamabilidad (< 5 % del LII)",
-  "Temperatura (17 a 23 °C WGBT)",
-];
 
 export default function Home() {
   const [activeStep, setActiveStep] = useState<StepNumber>(1);
@@ -54,6 +40,10 @@ export default function Home() {
     epp: "",
     rescate: "",
     otros: "",
+    personal: "",
+    personalhse: "",
+    ciudadania: "",
+    trabajador: "",
   });
   const [workerForm, setWorkerForm] = useState({
     identificacion: "",
@@ -66,7 +56,7 @@ export default function Home() {
   const workerCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const workerIsDrawingRef = useRef(false);
   const workerHasStrokeRef = useRef(false);
-  const totalSteps = 8;
+  const totalSteps = 4;
   const progress = (activeStep / totalSteps) * 100;
   const currentSection = sections.find((section) => section.step === activeStep) ?? sections[0];
   const durationValue = calcularDuracion(generalInfo.horaInicio, generalInfo.horaFin) || generalInfo.duracion;
@@ -366,15 +356,18 @@ export default function Home() {
         );
       case 3:
         return (
-            <div className="space-y-8">
+          <div className="space-y-8">
+            <div className="mini-block mini-block--header">
+              <div className="mini-title mini-title--bar">
+                RELACIONE LOS EPP A UTILIZAR Y EL EQUIPO DE RESCATE DISPONIBLE
+              </div>
+            </div>
+
             <div className="mini-block">
               <div className="flex justify-center">
-                <Image
-
+                <img
                   src="/EPP.png"
                   alt="Equipos de Protección Personal"
-                  width={1200}
-                  height={700}
                   className="max-h-72 w-full max-w-3xl rounded-2xl object-contain"
                 />
               </div>
@@ -391,11 +384,9 @@ export default function Home() {
 
             <div className="mini-block">
               <div className="flex justify-center">
-                <Image
+                <img
                   src="/kit-de-rescate.png"
                   alt="Equipos de rescate"
-                  width={1200}
-                  height={700}
                   className="max-h-72 w-full max-w-3xl rounded-2xl object-contain"
                 />
               </div>
@@ -456,14 +447,25 @@ export default function Home() {
 
               <div className="grid gap-6">
                 <div className="soft-card compact-card">
-                  <h3 className="mini-title">CÉDULA DEL PERSONAL HSE</h3>
-                  <div className="mini-value"> </div>
+                  <Field
+                    label="CÉDULA DEL PERSONAL HSE"
+                    value={generalInfo.personal}
+                    placeholder="Ej. 321233"
+                    onChange={(value) => setGeneralInfo((prev) => ({ ...prev, personal: value }))}
+                  />
                 </div>
 
                 <div className="soft-card compact-card">
-                  <h3 className="mini-title">NOMBRE DEL PERSONAL HSE QUE REVISA Y CERTIFICA ESTE PERMISO</h3>
-                  <div className="mini-value"> </div>
-                  <div className="signature-box signature-box--large signature-box--dashed" />
+                  <Field
+                    label="NOMBRE DEL PERSONAL HSE QUE REVISA Y CERTIFICA ESTE PERMISO"
+                    value={generalInfo.personalhse}
+                    placeholder="Ej. Pepito Pérez"
+                    onChange={(value) => setGeneralInfo((prev) => ({ ...prev, personalhse: value }))}
+                  />
+                  <div className="signature-slot">
+                    <div className="mini-title">FIRMA</div>
+                    <SignaturePad />
+                  </div>
                 </div>
               </div>
 
@@ -476,121 +478,27 @@ export default function Home() {
 
               <div className="grid gap-6">
                 <div className="soft-card compact-card">
-                  <h3 className="mini-title">CÉDULA DE CIUDADANÍA DEL RESPONSABLE DE LA EJECUCIÓN DEL TRABAJO</h3>
-                  <div className="mini-value"> </div>
+                  <Field
+                    label="CÉDULA DE CIUDADANÍA DEL RESPONSABLE DE LA EJECUCIÓN DEL TRABAJO"
+                    value={generalInfo.ciudadania}
+                    placeholder="Ej. 32323"
+                    onChange={(value) => setGeneralInfo((prev) => ({ ...prev, ciudadania: value }))}
+                  />
                 </div>
 
                 <div className="soft-card compact-card">
-                  <h3 className="mini-title">NOMBRE RESPONSABLE EJECUCIÓN DEL TRABAJO</h3>
-                  <div className="mini-value"> </div>
-                  <div className="signature-box signature-box--large signature-box--dashed" />
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      case 5:
-        return (
-          <div className="legal-block">
-            <p className="legal-text">
-              &quot;Declaro que soy (somos) consciente(s) de la responsabilidad y, después de haber evaluado los peligros
-              inherentes al trabajo a realizar, autorizo su ejecución, siempre que se sigan las precauciones y
-              definiciones acordadas en conjunto con el (los) trabajador(es) que ejecuta(n) la tarea. Constato que he
-              verificado que todas las recomendaciones de seguridad aquí contempladas cumplen con los requisitos
-              establecidos.&quot;
-            </p>
-            <div className="auth-grid">
-              <div className="auth-card">
-                <p>YO, JOHNATAN JAVIER UMAÑA HE REVISADO EL ÁREA Y CERTIFICO QUE SE HAN TOMADO LAS PRECAUCIONES INDICADAS PARA DAR INICIO AL TRABAJO</p>
-                <div className="auth-signature">
-                  <span>JOHNATAN JAVIER UMAÑA - C.C. 1070324673</span>
-                  <div className="signature-box signature-box--auth">
-                    <span className="signature-mark" />
+                  <Field
+                    label="NOMBRE RESPONSABLE EJECUCIÓN DEL TRABAJO"
+                    value={generalInfo.trabajador}
+                    placeholder="Ej. 32323"
+                    onChange={(value) => setGeneralInfo((prev) => ({ ...prev, trabajador: value }))}
+                  />
+                  <div className="signature-slot">
+                    <div className="mini-title">FIRMA</div>
+                    <SignaturePad />
                   </div>
                 </div>
               </div>
-              <div className="auth-card">
-                <p>ACATAREMOS LAS NORMAS, PROCEDIMIENTOS Y RECOMENDACIONES MENCIONADOS POR EL PERSONAL HSE, PARA EL SEGURO DESARROLLO DE LA LABOR</p>
-                <div className="auth-signature">
-                  <span>JORGE IVAN CUERVO CAMARGO - C.C. 1101177475</span>
-                  <div className="signature-box signature-box--auth">
-                    <span className="signature-mark" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      case 6:
-        return (
-          <div className="monitor-list">
-            {monitoringItems.map((item) => (
-              <div className="monitor-row" key={item}>
-                <div className="monitor-name">{item}</div>
-                <div className="monitor-result">RESULTADO: N/A TOMADO EL: N/A</div>
-                <div className="check-pill check-pill--na">N/A</div>
-              </div>
-            ))}
-          </div>
-        );
-      case 7:
-        return (
-          <div className="info-stack">
-            <div className="mini-block">
-              <h3 className="mini-title">EQUIPO DE MEDICIÓN</h3>
-              <div className="mini-value">N/A</div>
-            </div>
-            <div className="mini-block">
-              <h3 className="mini-title">FIRMA MONITOR</h3>
-              <div className="signature-box signature-box--wide">
-                <span className="signature-mark" />
-              </div>
-            </div>
-            <div className="two-col two-col--fields">
-              <div className="mini-block">
-                <h3 className="mini-title">EQUIPOS DE PROTECCIÓN PERSONAL</h3>
-                <div className="field-outline" />
-              </div>
-              <div className="mini-block">
-                <h3 className="mini-title">EQUIPOS DE RESCATE</h3>
-                <div className="field-outline field-outline--filled">Cuerdas</div>
-              </div>
-            </div>
-            <div className="mini-block">
-              <h3 className="mini-title">OTROS</h3>
-              <div className="field-outline field-outline--tall" />
-            </div>
-          </div>
-        );
-      case 8:
-        return (
-          <div className="approval-area">
-            <table className="approval-table">
-              <thead>
-                <tr>
-                  <th>Usuario</th>
-                  <th>Fecha</th>
-                  <th>Aprobado</th>
-                  <th>Observacion</th>
-                  <th>Firma</th>
-                  <th>Adjunto</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>JOHNATAN UMAÑA<br />PROFESIONAL SISOMA</td>
-                  <td>2026-02-09<br />06:14</td>
-                  <td>Si</td>
-                  <td />
-                  <td>
-                    <div className="approval-signature" />
-                  </td>
-                  <td>No se adjuntó archivo</td>
-                </tr>
-              </tbody>
-            </table>
-            <div className="qr-wrap">
-              <div className="qr-box" />
             </div>
           </div>
         );
@@ -745,6 +653,130 @@ function SectionGroup({
         <p className="section-group__description">{description}</p>
       </div>
       {children}
+    </div>
+  );
+}
+
+function SignaturePad() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDrawingRef = useRef(false);
+  const hasStrokeRef = useRef(false);
+  const [signature, setSignature] = useState("");
+
+  const getContext = useCallback(() => canvasRef.current?.getContext("2d") ?? null, []);
+
+  const drawSavedSignature = useCallback(
+    (dataUrl: string) => {
+      const canvas = canvasRef.current;
+      if (!canvas || !dataUrl) return;
+
+      const ctx = getContext();
+      if (!ctx) return;
+
+      const image = new window.Image();
+      image.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      };
+      image.src = dataUrl;
+    },
+    [getContext]
+  );
+
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const parent = canvas.parentElement;
+    if (!parent) return;
+
+    const width = parent.clientWidth;
+    const height = 170;
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    const ctx = getContext();
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#0f172a";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (signature) {
+      drawSavedSignature(signature);
+    }
+  }, [drawSavedSignature, getContext, signature]);
+
+  useEffect(() => {
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    return () => window.removeEventListener("resize", resizeCanvas);
+  }, [resizeCanvas]);
+
+  const startDrawing = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    const ctx = getContext();
+    if (!canvas || !ctx) return;
+
+    isDrawingRef.current = true;
+    hasStrokeRef.current = false;
+    canvas.setPointerCapture(event.pointerId);
+    const rect = canvas.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(event.clientX - rect.left, event.clientY - rect.top);
+  };
+
+  const draw = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = getContext();
+    if (!canvas || !ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
+    ctx.stroke();
+    hasStrokeRef.current = true;
+  };
+
+  const stopDrawing = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    isDrawingRef.current = false;
+    if (hasStrokeRef.current) {
+      setSignature(canvas.toDataURL("image/png"));
+    }
+  };
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    const ctx = getContext();
+    if (!canvas || !ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasStrokeRef.current = false;
+    isDrawingRef.current = false;
+    setSignature("");
+  };
+
+  return (
+    <div className="signature-pad">
+      <canvas
+        ref={canvasRef}
+        className="signature-canvas signature-canvas--dashed"
+        onPointerDown={startDrawing}
+        onPointerMove={draw}
+        onPointerUp={stopDrawing}
+        onPointerLeave={stopDrawing}
+      />
+      <button type="button" className="signature-clear-button" onClick={clearSignature}>
+        Limpiar firma
+      </button>
     </div>
   );
 }
