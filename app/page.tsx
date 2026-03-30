@@ -53,7 +53,7 @@ export default function Home() {
     salud: "Seleccione una opcion",
   });
   const [extraWorkers, setExtraWorkers] = useState<
-    Array<{ id: number; identificacion: string; salud: string; signature: string }>
+    Array<{ id: number; identificacion: string; salud: string; dificultad: string; signature: string }>
   >([]);
   const [workerSignature, setWorkerSignature] = useState("");
   const [hseSignature, setHseSignature] = useState("");
@@ -200,6 +200,7 @@ export default function Home() {
       extraWorkers: extraWorkers.map((worker) => ({
         identificacion: worker.identificacion,
         salud: worker.salud,
+        dificultad: worker.dificultad,
         signature: summarizeSignature(worker.signature),
       })),
       signatures: {
@@ -217,7 +218,10 @@ export default function Home() {
   const addWorkerEntry = () => {
     setExtraWorkers((prev) => {
       const nextId = prev.length > 0 ? prev[prev.length - 1].id + 1 : 2;
-      return [...prev, { id: nextId, identificacion: "", salud: "Seleccione una opcion", signature: "" }];
+      return [
+        ...prev,
+        { id: nextId, identificacion: "", salud: "Seleccione una opcion", dificultad: "", signature: "" },
+      ];
     });
   };
 
@@ -225,7 +229,11 @@ export default function Home() {
     setExtraWorkers((prev) => prev.filter((worker) => worker.id !== id));
   };
 
-  const updateWorkerEntry = (id: number, field: "identificacion" | "salud" | "signature", value: string) => {
+  const updateWorkerEntry = (
+    id: number,
+    field: "identificacion" | "salud" | "dificultad" | "signature",
+    value: string
+  ) => {
     setExtraWorkers((prev) =>
       prev.map((worker) => (worker.id === id ? { ...worker, [field]: value } : worker))
     );
@@ -424,24 +432,30 @@ export default function Home() {
                         placeholder="Solo números"
                         onChange={(value) => updateWorkerEntry(worker.id, "identificacion", value)}
                       />
-                      <div className="field-shell">
+                      <Field
+                        label="¿Se encuentra en buen estado de salud para realizar la actividad?"
+                        value={worker.salud}
+                        as="select"
+                        options={["Seleccione una opcion", "Sí", "No"]}
+                        onChange={(value) => updateWorkerEntry(worker.id, "salud", value)}
+                      />
+                      {worker.salud === "No" ? (
+                        <Field
+                          label="¿Qué dificultad presenta?"
+                          value={worker.dificultad}
+                          placeholder="Describe brevemente la condición o dificultad"
+                          onChange={(value) => updateWorkerEntry(worker.id, "dificultad", value)}
+                        />
+                      ) : null}
+                      <div className="signature-slot">
+                        <div className="mini-title">Firma del trabajador</div>
                         <div className={`signature-status ${worker.signature ? "signature-status--success" : ""}`}>
                           {worker.signature ? "✓ Firma registrada" : "⏳ Pendiente"}
                         </div>
-                        <Field
-                          label="¿Se encuentra en buen estado de salud para realizar la actividad?"
-                          value={worker.salud}
-                          as="select"
-                          options={["Seleccione una opcion", "Sí", "No"]}
-                          onChange={(value) => updateWorkerEntry(worker.id, "salud", value)}
+                        <SignaturePad
+                          value={worker.signature}
+                          onChange={(value) => updateWorkerEntry(worker.id, "signature", value)}
                         />
-                        <div className="signature-slot">
-                          <div className="mini-title">Firma del trabajador</div>
-                          <SignaturePad
-                            value={worker.signature}
-                            onChange={(value) => updateWorkerEntry(worker.id, "signature", value)}
-                          />
-                        </div>
                       </div>
                     </div>
                   </div>
