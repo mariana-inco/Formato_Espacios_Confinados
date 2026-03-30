@@ -1,11 +1,12 @@
 "use client";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const sections = [
-  { step: 1, title: "Información general" },
-  { step: 2, title: "Trabajadores responsables" },
-  { step: 3, title: "Verificación diaria" },
-  { step: 4, title: "Información adicional" },
+  { step: 1, title: "Información general del Trabajo" },
+  { step: 2, title: "Personal Autorizado y Responsables" },
+  { step: 3, title: "Condiciones de seguridad y verificación" },
+  { step: 4, title: "Autorización y declaración de responsabilidad" },
 ] as const;
 
 type StepNumber = (typeof sections)[number]["step"];
@@ -51,7 +52,12 @@ export default function Home() {
     cargo: "",
     salud: "Seleccione una opcion",
   });
+  const [extraWorkers, setExtraWorkers] = useState<
+    Array<{ id: number; identificacion: string; salud: string; signature: string }>
+  >([]);
   const [workerSignature, setWorkerSignature] = useState("");
+  const [hseSignature, setHseSignature] = useState("");
+  const [leaderSignature, setLeaderSignature] = useState("");
   const [workerSignatureError, setWorkerSignatureError] = useState("");
   const workerCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const workerIsDrawingRef = useRef(false);
@@ -60,7 +66,6 @@ export default function Home() {
   const progress = (activeStep / totalSteps) * 100;
   const currentSection = sections.find((section) => section.step === activeStep) ?? sections[0];
   const durationValue = calcularDuracion(generalInfo.horaInicio, generalInfo.horaFin) || generalInfo.duracion;
-
   const getCanvasContext = useCallback(() => workerCanvasRef.current?.getContext("2d") ?? null, []);
 
   const restoreSignature = useCallback(
@@ -120,6 +125,12 @@ export default function Home() {
     return () => window.removeEventListener("resize", resizeWorkerCanvas);
   }, [resizeWorkerCanvas]);
 
+  useEffect(() => {
+    if (activeStep === 2) {
+      window.requestAnimationFrame(() => resizeWorkerCanvas());
+    }
+  }, [activeStep, resizeWorkerCanvas]);
+
   const startWorkerDrawing = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = workerCanvasRef.current;
     const ctx = getCanvasContext();
@@ -177,6 +188,47 @@ export default function Home() {
     if (activeStep > 1) {
       setActiveStep((value) => (value - 1) as StepNumber);
     }
+  };
+
+  const handleSubmitForm = () => {
+    const payload = {
+      generalInfo: {
+        ...generalInfo,
+        duracion: durationValue,
+      },
+      workerForm,
+      extraWorkers: extraWorkers.map((worker) => ({
+        identificacion: worker.identificacion,
+        salud: worker.salud,
+        signature: summarizeSignature(worker.signature),
+      })),
+      signatures: {
+        trabajador: summarizeSignature(workerSignature),
+        hse: summarizeSignature(hseSignature),
+        responsable: summarizeSignature(leaderSignature),
+      },
+    };
+
+    console.log("Formulario enviado");
+    console.log(JSON.stringify(payload, null, 2));
+    window.alert("Formulario enviado correctamente");
+  };
+
+  const addWorkerEntry = () => {
+    setExtraWorkers((prev) => {
+      const nextId = prev.length > 0 ? prev[prev.length - 1].id + 1 : 2;
+      return [...prev, { id: nextId, identificacion: "", salud: "Seleccione una opcion", signature: "" }];
+    });
+  };
+
+  const removeWorkerEntry = (id: number) => {
+    setExtraWorkers((prev) => prev.filter((worker) => worker.id !== id));
+  };
+
+  const updateWorkerEntry = (id: number, field: "identificacion" | "salud" | "signature", value: string) => {
+    setExtraWorkers((prev) =>
+      prev.map((worker) => (worker.id === id ? { ...worker, [field]: value } : worker))
+    );
   };
   const renderSection = (step: StepNumber) => {
     switch (step) {
@@ -346,10 +398,54 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="worker-actions__row worker-actions__row--full">
-                  <button type="button" className="btn btn-primary btn-sm btn-primary--accent">
+                  <button type="button" onClick={addWorkerEntry} className="btn btn-primary btn-sm btn-primary--accent">
                     AGREGAR TRABAJADOR
                   </button>
                 </div>
+              </div>
+
+              <div className="space-y-6 pt-4">
+                {extraWorkers.map((worker, index) => (
+                  <div className="soft-card compact-card" key={worker.id}>
+                    <div className="declaration-card__head worker-extra__head">
+                      <h3 className="declaration-card__title">TRABAJADOR {index + 2}</h3>
+                      <button
+                        type="button"
+                        className="worker-extra__remove"
+                        onClick={() => removeWorkerEntry(worker.id)}
+                      >
+                        ✕ Eliminar
+                      </button>
+                    </div>
+                    <div className="grid gap-6">
+                      <Field
+                        label="N° de identificación"
+                        value={worker.identificacion}
+                        placeholder="Solo números"
+                        onChange={(value) => updateWorkerEntry(worker.id, "identificacion", value)}
+                      />
+                      <div className="field-shell">
+                        <div className={`signature-status ${worker.signature ? "signature-status--success" : ""}`}>
+                          {worker.signature ? "✓ Firma registrada" : "⏳ Pendiente"}
+                        </div>
+                        <Field
+                          label="¿Se encuentra en buen estado de salud para realizar la actividad?"
+                          value={worker.salud}
+                          as="select"
+                          options={["Seleccione una opcion", "Sí", "No"]}
+                          onChange={(value) => updateWorkerEntry(worker.id, "salud", value)}
+                        />
+                        <div className="signature-slot">
+                          <div className="mini-title">Firma del trabajador</div>
+                          <SignaturePad
+                            value={worker.signature}
+                            onChange={(value) => updateWorkerEntry(worker.id, "signature", value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </SectionGroup>
           </div>
@@ -365,9 +461,11 @@ export default function Home() {
 
             <div className="mini-block">
               <div className="flex justify-center">
-                <img
+                <Image
                   src="/EPP.png"
                   alt="Equipos de Protección Personal"
+                  width={1200}
+                  height={700}
                   className="max-h-72 w-full max-w-3xl rounded-2xl object-contain"
                 />
               </div>
@@ -384,9 +482,11 @@ export default function Home() {
 
             <div className="mini-block">
               <div className="flex justify-center">
-                <img
+                <Image
                   src="/kit-de-rescate.png"
                   alt="Equipos de rescate"
+                  width={1200}
+                  height={700}
                   className="max-h-72 w-full max-w-3xl rounded-2xl object-contain"
                 />
               </div>
@@ -464,7 +564,7 @@ export default function Home() {
                   />
                   <div className="signature-slot">
                     <div className="mini-title">FIRMA</div>
-                    <SignaturePad />
+                    <SignaturePad value={hseSignature} onChange={setHseSignature} />
                   </div>
                 </div>
               </div>
@@ -495,7 +595,7 @@ export default function Home() {
                   />
                   <div className="signature-slot">
                     <div className="mini-title">FIRMA</div>
-                    <SignaturePad />
+                    <SignaturePad value={leaderSignature} onChange={setLeaderSignature} />
                   </div>
                 </div>
               </div>
@@ -559,7 +659,11 @@ export default function Home() {
                 Siguiente
               </button>
             ) : (
-              <button type="button" className="rounded-lg bg-blue-600 px-8 py-4 text-2xl text-white shadow-sm transition-colors hover:bg-blue-700">
+              <button
+                type="button"
+                onClick={handleSubmitForm}
+                className="rounded-lg bg-blue-600 px-8 py-4 text-2xl text-white shadow-sm transition-colors hover:bg-blue-700"
+              >
                 Enviar formulario
               </button>
             )}
@@ -657,11 +761,30 @@ function SectionGroup({
   );
 }
 
-function SignaturePad() {
+function summarizeSignature(signature: string) {
+  return signature
+    ? {
+        registrado: true,
+        longitudBase64: signature.length,
+        vistaPrevia: `${signature.slice(0, 32)}...`,
+      }
+    : {
+        registrado: false,
+        longitudBase64: 0,
+        vistaPrevia: "",
+      };
+}
+
+function SignaturePad({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
   const hasStrokeRef = useRef(false);
-  const [signature, setSignature] = useState("");
 
   const getContext = useCallback(() => canvasRef.current?.getContext("2d") ?? null, []);
 
@@ -707,10 +830,10 @@ function SignaturePad() {
     ctx.strokeStyle = "#0f172a";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (signature) {
-      drawSavedSignature(signature);
+    if (value) {
+      drawSavedSignature(value);
     }
-  }, [drawSavedSignature, getContext, signature]);
+  }, [drawSavedSignature, getContext, value]);
 
   useEffect(() => {
     resizeCanvas();
@@ -749,7 +872,7 @@ function SignaturePad() {
 
     isDrawingRef.current = false;
     if (hasStrokeRef.current) {
-      setSignature(canvas.toDataURL("image/png"));
+      onChange(canvas.toDataURL("image/png"));
     }
   };
 
@@ -761,7 +884,7 @@ function SignaturePad() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     hasStrokeRef.current = false;
     isDrawingRef.current = false;
-    setSignature("");
+    onChange("");
   };
 
   return (
