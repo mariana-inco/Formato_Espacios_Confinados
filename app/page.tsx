@@ -366,10 +366,11 @@ export default function Home() {
         );
       case 3:
         return (
-          <div className="space-y-8">
+            <div className="space-y-8">
             <div className="mini-block">
               <div className="flex justify-center">
                 <Image
+
                   src="/EPP.png"
                   alt="Equipos de Protección Personal"
                   width={1200}
@@ -421,26 +422,71 @@ export default function Home() {
         );
       case 4:
         return (
-          <div className="two-col">
-            {[
-              ["SUPERVISOR ESPACIOS CONFINADOS", "Johnatan Umaña"],
-              ["VIGÍA RESPONSABLE DE LA ACTIVIDAD", "Julio muñoz"],
-              ["TRABAJADOR ENTRANTE ESPACIO CONFINADO", "N/A"],
-              ["JEFE DEL ÁREA / LÍDER DE PROCESO", "Jorge Cuervo"],
-            ].map(([title, value]) => (
-              <div className="soft-card compact-card" key={title}>
-                <h3 className="mini-title">{title}</h3>
-                <div className="mini-value">{value}</div>
+          <div className="space-y-8">
+            <section className="declaration-card">
+              <div className="declaration-card__head">
+                <span className="declaration-card__icon">⚠</span>
+                <h3 className="declaration-card__title">TÉRMINO DE RESPONSABILIDADES Y AUTORIZACIÓN PARA EJECUCIÓN DE TRABAJOS</h3>
               </div>
-            ))}
-            {["FIRMA SUPERVISOR", "FIRMA VIGÍA", "FIRMA TRABAJADOR", "FIRMA JEFE"].map((title) => (
-              <div className="soft-card signature-card" key={title}>
-                <h3 className="mini-title">{title}</h3>
-                <div className="signature-box signature-box--large">
-                  <span className="signature-mark" />
+              <div className="declaration-card__body">
+                <p className="declaration-card__lead">DECLARO</p>
+                <p className="declaration-card__text">
+                  Que soy(mos) conscientes de la responsabilidad y después de tener evaluados los peligros inherentes al
+                  trabajo a ser realizado autorizo su ejecución siempre seguido de las precauciones y definiciones
+                  acordadas en conjunto con el trabajador(es) que ejecutan la tarea.
+                </p>
+                <p className="declaration-card__foot">
+                  (Constato que he verificado que todas las recomendaciones de seguridad aquí contempladas cumplen con los
+                  requisitos establecidos).
+                </p>
+              </div>
+            </section>
+
+            <div className="space-y-6">
+              <div className="mini-block">
+                <div className="mini-title">
+                  DECLARO QUE HE REVISADO EL ÁREA Y CERTIFICO QUE SE HAN TOMADO LAS PRECAUCIONES INDICADAS PARA DAR
+                  INICIO AL TRABAJO
                 </div>
               </div>
-            ))}
+              <label className="declaration-check">
+                <input type="checkbox" />
+                <span>Acepto y entiendo la declaración de responsabilidad</span>
+              </label>
+
+              <div className="grid gap-6">
+                <div className="soft-card compact-card">
+                  <h3 className="mini-title">CÉDULA DEL PERSONAL HSE</h3>
+                  <div className="mini-value"> </div>
+                </div>
+
+                <div className="soft-card compact-card">
+                  <h3 className="mini-title">NOMBRE DEL PERSONAL HSE QUE REVISA Y CERTIFICA ESTE PERMISO</h3>
+                  <div className="mini-value"> </div>
+                  <div className="signature-box signature-box--large signature-box--dashed" />
+                </div>
+              </div>
+
+              <div className="mini-block">
+                <div className="mini-title">
+                  DECLARO QUE ACATAREMOS LAS NORMAS, PROCEDIMIENTOS Y RECOMENDACIONES MENCIONADOS POR EL PERSONAL HSE,
+                  PARA EL SEGURO DESARROLLO DE LA LABOR
+                </div>
+              </div>
+
+              <div className="grid gap-6">
+                <div className="soft-card compact-card">
+                  <h3 className="mini-title">CÉDULA DE CIUDADANÍA DEL RESPONSABLE DE LA EJECUCIÓN DEL TRABAJO</h3>
+                  <div className="mini-value"> </div>
+                </div>
+
+                <div className="soft-card compact-card">
+                  <h3 className="mini-title">NOMBRE RESPONSABLE EJECUCIÓN DEL TRABAJO</h3>
+                  <div className="mini-value"> </div>
+                  <div className="signature-box signature-box--large signature-box--dashed" />
+                </div>
+              </div>
+            </div>
           </div>
         );
       case 5:
