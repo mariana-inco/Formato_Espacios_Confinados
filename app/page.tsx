@@ -51,6 +51,7 @@ export default function Home() {
     nombre: "",
     cargo: "",
     salud: "Seleccione una opcion",
+    dificultad: "",
   });
   const [extraWorkers, setExtraWorkers] = useState<
     Array<{ id: number; identificacion: string; salud: string; dificultad: string; signature: string }>
@@ -383,6 +384,15 @@ export default function Home() {
                   options={["Seleccione una opcion", "Sí", "No"]}
                   onChange={(value) => setWorkerForm((prev) => ({ ...prev, salud: value }))}
                 />
+                {workerForm.salud === "No" ? (
+                  <Field
+                    label="¿Qué dificultad presenta?"
+                    value={workerForm.dificultad}
+                    placeholder="Describe brevemente la condición o dificultad"
+                    full
+                    onChange={(value) => setWorkerForm((prev) => ({ ...prev, dificultad: value }))}
+                  />
+                ) : null}
                 <div className="field-shell field-shell--full">
                   <div className={`signature-status ${workerSignature ? "signature-status--success" : ""}`}>
                     {workerSignature ? "✓ Firma registrada" : "⏳ Pendiente"}
