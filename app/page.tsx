@@ -1,5 +1,9 @@
 "use client";
 import Image from "next/image";
+//useCallback para funciones que se pasan a componentes hijos y podrían causar renders innecesarios
+//useEffect para manejar efectos secundarios como eventos de scroll o resize
+//useRef para mantener referencias a elementos del DOM, como el canvas de firma
+//useState para manejar el estado de la aplicación, como el paso activo, la información del formulario y las firmas
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const sections = [
@@ -11,13 +15,21 @@ const sections = [
 
 type StepNumber = (typeof sections)[number]["step"];
 
+// Función para calcular la duración entre dos horas en formato "HH:MM"
 function calcularDuracion(inicio: string, fin: string) {
   if (!inicio || !fin) return "";
+  // Convertir horas y minutos a números
   const [inicioHoras, inicioMinutos] = inicio.split(":").map(Number);
+  // Validar que las horas y minutos sean números válidos
   const [finHoras, finMinutos] = fin.split(":").map(Number);
+  // Si alguna de las partes no es un número válido, retornar cadena vacía
   if ([inicioHoras, inicioMinutos, finHoras, finMinutos].some(Number.isNaN)) return "";
+
+  // Calcular la duración en minutos, considerando el caso de cruce de medianoche
   let minutos = finHoras * 60 + finMinutos - (inicioHoras * 60 + inicioMinutos);
+  // Si el resultado es negativo, significa que se cruzó la medianoche, por lo que se suma un día (24 horas)
   if (minutos < 0) minutos += 24 * 60;
+  // Convertir minutos a horas con un decimal
   const horas = minutos / 60;
   const valorFormateado = Number.isInteger(horas) ? horas.toFixed(0) : horas.toFixed(1);
 
@@ -25,8 +37,13 @@ function calcularDuracion(inicio: string, fin: string) {
 }
 
 export default function Home() {
+  //Estado para manejar el paso activo del formulario, la visibilidad del botón de scroll,
   const [activeStep, setActiveStep] = useState<StepNumber>(1);
+
+  //Estado para manejar la información general del trabajo, el formulario del trabajador, los trabajadores adicionales y las firmas
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  //Información general del trabajo
   const [generalInfo, setGeneralInfo] = useState({
     lugar: "",
     fecha: new Date().toISOString().slice(0, 10),
@@ -47,6 +64,8 @@ export default function Home() {
     ciudadania: "",
     trabajador: "",
   });
+
+  //Formulario del trabajador principal
   const [workerForm, setWorkerForm] = useState({
     identificacion: "",
     nombre: "",
@@ -54,33 +73,62 @@ export default function Home() {
     salud: "Seleccione una opcion",
     dificultad: "",
   });
+  //Trabajadores adicionales
   const [extraWorkers, setExtraWorkers] = useState<
     Array<{ id: number; identificacion: string; salud: string; dificultad: string; signature: string }>
   >([]);
+  //Firmas
   const [workerSignature, setWorkerSignature] = useState("");
+
+  //Firmas de personal HSE y responsable de ejecución
   const [hseSignature, setHseSignature] = useState("");
+
+  //Errores de validación de firma
   const [leaderSignature, setLeaderSignature] = useState("");
+
+  //Estado para manejar errores de validación de la firma del trabajador
   const [workerSignatureError, setWorkerSignatureError] = useState("");
+
+  //Referencias para el canvas de firma del trabajador y flags para controlar el estado de dibujo
   const workerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  //useRef para controlar si el trabajador está dibujando en el canvas y si ha realizado algún trazo
   const workerIsDrawingRef = useRef(false);
+
+  //useRef para controlar si el trabajador ha realizado algún trazo en el canvas
   const workerHasStrokeRef = useRef(false);
+
+  //Calcular el progreso del formulario, obtener la sección actual
   const totalSteps = 4;
+
+  //Calcular el progreso del formulario como porcentaje
   const progress = (activeStep / totalSteps) * 100;
+
+  //Encontrar la sección actual basada en el paso activo, o usar la primera sección como fallback
   const currentSection = sections.find((section) => section.step === activeStep) ?? sections[0];
+
+  //Calcular la duración entre hora de inicio y fin, o usar el valor manual si no se pueden calcular
   const durationValue = calcularDuracion(generalInfo.horaInicio, generalInfo.horaFin) || generalInfo.duracion;
+
+  //Funciones para manejar la firma del trabajador, redimensionar el canvas, restaurar la firma desde base64
   const getCanvasContext = useCallback(() => workerCanvasRef.current?.getContext("2d") ?? null, []);
-  const scrollToTop = useCallback(() => {
+
+  //Función para hacer scroll suave al inicio de la página
+   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  //Función para restaurar la firma del trabajador desde una imagen en base64, dibujándola en el canvas
   const restoreSignature = useCallback(
     (firmaBase64: string) => {
       const canvas = workerCanvasRef.current;
       if (!canvas || !firmaBase64) return;
 
+      // Crear una nueva imagen y dibujarla en el canvas cuando se cargue
       const ctx = getCanvasContext();
       if (!ctx) return;
 
+      // Limpiar el canvas antes de dibujar la firma restaurada
       const image = new window.Image();
       image.onload = () => {
         ctx.save();
@@ -94,21 +142,24 @@ export default function Home() {
     [getCanvasContext]
   );
 
+  //Función para redimensionar el canvas de firma del trabajador, ajustando su tamaño al contenedor y restaurando la firma si existe
   const resizeWorkerCanvas = useCallback(() => {
     const canvas = workerCanvasRef.current;
     if (!canvas) return;
 
+    // Ajustar el tamaño del canvas al tamaño de su contenedor padre
     const parent = canvas.parentElement;
     if (!parent) return;
 
+  // Obtener el ancho del contenedor y establecer una altura fija para el canvas
     const width = parent.clientWidth;
     const height = 280;
-
     canvas.width = width;
     canvas.height = height;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
+    // Configurar el contexto del canvas con estilos de dibujo y restaurar la firma si existe, o limpiar el canvas si no hay firma
     const ctx = getCanvasContext();
     if (!ctx) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -117,6 +168,7 @@ export default function Home() {
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = "#0f172a";
 
+    // Restaurar la firma del trabajador si existe, o limpiar el canvas si no hay firma
     if (workerSignature) {
       restoreSignature(workerSignature);
     } else {
@@ -124,28 +176,31 @@ export default function Home() {
     }
   }, [getCanvasContext, restoreSignature, workerSignature]);
 
+  //useEffect para redimensionar el canvas de firma del trabajador al cargar la página 
   useEffect(() => {
     resizeWorkerCanvas();
     window.addEventListener("resize", resizeWorkerCanvas);
     return () => window.removeEventListener("resize", resizeWorkerCanvas);
   }, [resizeWorkerCanvas]);
-
-  useEffect(() => {
+  
+  //useEffect para mostrar u ocultar el botón de scroll al inicio dependiendo de la posición de scroll del usuario
+    useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 500);
     };
-
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  //useEffect para redimensionar el canvas de firma del trabajador cada vez que se cambia al paso 2, asegurando que el canvas se ajuste correctamente al contenedor
   useEffect(() => {
     if (activeStep === 2) {
       window.requestAnimationFrame(() => resizeWorkerCanvas());
     }
   }, [activeStep, resizeWorkerCanvas]);
 
+  //Funciones para manejar el dibujo de la firma del trabajador
   const startWorkerDrawing = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = workerCanvasRef.current;
     const ctx = getCanvasContext();
@@ -159,18 +214,21 @@ export default function Home() {
     ctx.moveTo(event.clientX - rect.left, event.clientY - rect.top);
   };
 
+  //Función para manejar el dibujo de la firma del trabajador, dibujando líneas en el canvas a medida que el usuario mueve el puntero mientras está dibujando
   const drawWorkerSignature = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (!workerIsDrawingRef.current) return;
     const canvas = workerCanvasRef.current;
     const ctx = getCanvasContext();
     if (!canvas || !ctx) return;
 
+    // Dibujar una línea desde la última posición hasta la nueva posición del puntero, ajustando las coordenadas para tener en cuenta la posición del canvas en la página
     const rect = canvas.getBoundingClientRect();
     ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
     ctx.stroke();
     workerHasStrokeRef.current = true;
   };
 
+  //Función para manejar el fin del dibujo de la firma del trabajador, liberando el puntero y guardando la firma como una imagen en base64 si se ha dibujado algo en el canvas, o mostrando un error si no se ha dibujado nada
   const stopDrawing = () => {
     const canvas = workerCanvasRef.current;
     if (!canvas) return;
@@ -183,6 +241,7 @@ export default function Home() {
     }
   };
 
+  //Función para limpiar la firma del trabajador, borrando el canvas y reseteando el estado de la firma y los errores
   const clearWorkerSignature = () => {
     const canvas = workerCanvasRef.current;
     const ctx = getCanvasContext();
@@ -194,17 +253,21 @@ export default function Home() {
     workerHasStrokeRef.current = false;
   };
 
+  //Funciones para manejar la navegación entre pasos del formulario, asegurando que el usuario no pueda avanzar más allá del último paso ni retroceder antes del primer paso
   const nextStep = () => {
     if (activeStep < totalSteps) {
       setActiveStep((value) => (value + 1) as StepNumber);
     }
   };
+
+  // Función para manejar el paso anterior del formulario, asegurando que el usuario no pueda retroceder antes del primer paso
   const prevStep = () => {
     if (activeStep > 1) {
       setActiveStep((value) => (value - 1) as StepNumber);
     }
   };
 
+//Función para manejar el envío del formulario, recopilando toda la información y las firmas en un objeto payload, mostrando el resultado en la consola y alertando al usuario que el formulario se ha enviado correctamente
   const handleSubmitForm = () => {
     const payload = {
       generalInfo: {
@@ -230,6 +293,7 @@ export default function Home() {
     window.alert("Formulario enviado correctamente");
   };
 
+  // Función para resumir una firma en base64 a una cadena más corta para facilitar su visualización en la consola, tomando los primeros 30 caracteres y los últimos 30 caracteres de la cadena original
   const addWorkerEntry = () => {
     setExtraWorkers((prev) => {
       const nextId = prev.length > 0 ? prev[prev.length - 1].id + 1 : 2;
@@ -240,10 +304,12 @@ export default function Home() {
     });
   };
 
+  // Función para eliminar un trabajador adicional del formulario, filtrando el estado de trabajadores adicionales para remover el trabajador con el id especificado
   const removeWorkerEntry = (id: number) => {
     setExtraWorkers((prev) => prev.filter((worker) => worker.id !== id));
   };
 
+  // Función para actualizar un campo específico de un trabajador adicional, mapeando el estado de trabajadores adicionales para actualizar el campo especificado del trabajador con el id dado
   const updateWorkerEntry = (
     id: number,
     field: "identificacion" | "salud" | "dificultad" | "signature",
@@ -253,6 +319,8 @@ export default function Home() {
       prev.map((worker) => (worker.id === id ? { ...worker, [field]: value } : worker))
     );
   };
+
+  // Función para resumir una firma en base64 a una cadena más corta para facilitar su visualización en la consola, tomando los primeros 30 caracteres y los últimos 30 caracteres de la cadena original
   const renderSection = (step: StepNumber) => {
     switch (step) {
       case 1:
@@ -644,6 +712,7 @@ export default function Home() {
         return null;
     }
   };
+  // Renderizar la estructura principal de la página, incluyendo el encabezado del documento, la sección actual del formulario, los botones de navegación y el botón de scroll al inicio
   return (
     <main className="page-shell">
       <div className="page-frame">
@@ -679,7 +748,8 @@ export default function Home() {
             </div>
           </div>
           <div className="section-card__body">{renderSection(activeStep)}</div>
-          <div className="flex gap-4 border-t border-slate-200 pt-6 pb-8">
+          <div className="flex gap-4 border-t border-slate-200 pt-6">
+            <br /> <br />
             <button
               type="button"
               onClick={prevStep}
@@ -730,6 +800,7 @@ export default function Home() {
   );
 }
 
+// Componente reutilizable para campos de formulario, que puede renderizarse como input, textarea o select dependiendo de las props, y que muestra una etiqueta, el valor actual, un placeholder, un texto de ayuda y estilos condicionales según las props recibidas
 function Field({
   label,
   value,
@@ -797,6 +868,7 @@ function Field({
   );
 }
 
+// Componente para agrupar secciones del formulario, mostrando un título, una descripción y el contenido de las secciones agrupadas, con estilos específicos para la estructura del grupo
 function SectionGroup({
   title,
   description,
@@ -817,6 +889,7 @@ function SectionGroup({
   );
 }
 
+// Función para resumir una firma en base64 a una cadena más corta para facilitar su visualización en la consola, indicando si la firma está registrada, su longitud en caracteres y una vista previa de los primeros 32 caracteres de la cadena original
 function summarizeSignature(signature: string) {
   return signature
     ? {
@@ -831,6 +904,7 @@ function summarizeSignature(signature: string) {
       };
 }
 
+// Componente para manejar la captura de firmas en un canvas, permitiendo al usuario dibujar su firma con el mouse o el dedo, guardar la firma como una imagen en base64 y mostrar un botón para limpiar la firma, con estilos específicos para el canvas y el botón
 function SignaturePad({
   value,
   onChange,
@@ -842,8 +916,10 @@ function SignaturePad({
   const isDrawingRef = useRef(false);
   const hasStrokeRef = useRef(false);
 
+  // Función para obtener el contexto 2D del canvas, devolviendo null si el canvas no está disponible o si no se puede obtener el contexto
   const getContext = useCallback(() => canvasRef.current?.getContext("2d") ?? null, []);
 
+  // Función para dibujar una firma guardada en el canvas, tomando la imagen en base64 como argumento, creando un objeto Image, cargando la imagen y dibujándola en el canvas, o limpiando el canvas si no se proporciona una imagen válida
   const drawSavedSignature = useCallback(
     (dataUrl: string) => {
       const canvas = canvasRef.current;
@@ -862,6 +938,7 @@ function SignaturePad({
     [getContext]
   );
 
+  // Función para redimensionar el canvas, ajustando su tamaño al contenedor padre, configurando el contexto para dibujar líneas suaves y limpias, y redibujando la firma guardada si existe, asegurando que el canvas se vea bien en diferentes tamaños de pantalla
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -877,6 +954,7 @@ function SignaturePad({
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
+    // Configurar el contexto para dibujar líneas suaves y limpias, y limpiar el canvas antes de redibujar la firma guardada si existe
     const ctx = getContext();
     if (!ctx) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -897,6 +975,7 @@ function SignaturePad({
     return () => window.removeEventListener("resize", resizeCanvas);
   }, [resizeCanvas]);
 
+  // Función para manejar el inicio del dibujo de la firma, activando el modo de dibujo, capturando el puntero y comenzando un nuevo trazo en el canvas, ajustando las coordenadas para tener en cuenta la posición del canvas en la página
   const startDrawing = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     const ctx = getContext();
@@ -910,18 +989,21 @@ function SignaturePad({
     ctx.moveTo(event.clientX - rect.left, event.clientY - rect.top);
   };
 
+  // Función para manejar el dibujo de la firma mientras el usuario mueve el puntero, dibujando líneas en el canvas si el modo de dibujo está activo, ajustando las coordenadas para tener en cuenta la posición del canvas en la página y marcando que se ha dibujado algo en el canvas
   const draw = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current) return;
     const canvas = canvasRef.current;
     const ctx = getContext();
     if (!canvas || !ctx) return;
 
+    // Ajustar las coordenadas del puntero para tener en cuenta la posición del canvas en la página
     const rect = canvas.getBoundingClientRect();
     ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
     ctx.stroke();
     hasStrokeRef.current = true;
   };
 
+  // Función para manejar el fin del dibujo de la firma, desactivando el modo de dibujo, liberando el puntero y guardando la firma como una imagen en base64 si se ha dibujado algo en el canvas
   const stopDrawing = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -932,6 +1014,7 @@ function SignaturePad({
     }
   };
 
+  // Función para limpiar la firma del canvas, borrando todo el contenido del canvas, reseteando los estados de dibujo y firma, y notificando al componente padre que la firma ha sido eliminada
   const clearSignature = () => {
     const canvas = canvasRef.current;
     const ctx = getContext();
@@ -943,6 +1026,7 @@ function SignaturePad({
     onChange("");
   };
 
+  // Renderizar el componente de la firma, incluyendo el canvas para dibujar la firma y un botón para limpiar la firma
   return (
     <div className="signature-pad">
       <canvas
