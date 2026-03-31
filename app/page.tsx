@@ -91,6 +91,7 @@ export default function Home() {
 
   //Referencias para el canvas de firma del trabajador y flags para controlar el estado de dibujo
   const workerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sectionContentRef = useRef<HTMLDivElement | null>(null);
 
   //useRef para controlar si el trabajador está dibujando en el canvas y si ha realizado algún trazo
   const workerIsDrawingRef = useRef(false);
@@ -182,6 +183,16 @@ export default function Home() {
     window.addEventListener("resize", resizeWorkerCanvas);
     return () => window.removeEventListener("resize", resizeWorkerCanvas);
   }, [resizeWorkerCanvas]);
+
+  useEffect(() => {
+    if (!sectionContentRef.current) return;
+    window.requestAnimationFrame(() => {
+      sectionContentRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [activeStep]);
   
   //useEffect para mostrar u ocultar el botón de scroll al inicio dependiendo de la posición de scroll del usuario
     useEffect(() => {
@@ -747,7 +758,9 @@ export default function Home() {
               />
             </div>
           </div>
-          <div className="section-card__body">{renderSection(activeStep)}</div>
+          <div ref={sectionContentRef} className="section-card__body">
+            {renderSection(activeStep)}
+          </div>
           <div className="flex gap-4 border-t border-slate-200 pt-6">
             <br /> <br />
             <button
