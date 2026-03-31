@@ -149,6 +149,12 @@ button, input, select, textarea { font: inherit; }
   border-color: #94a3b8;
 }
 
+.field-shell__input--error {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+  background: #fff7f7;
+}
+
 .field-shell__input:focus,
 .field-shell__value:focus-within {
   outline: none;
@@ -179,6 +185,10 @@ button, input, select, textarea { font: inherit; }
   margin-top: 6px;
   font-size: 0.78rem;
   color: #64748b;
+}
+
+.field-helper--error {
+  color: #dc2626;
 }
 
 .section-group {

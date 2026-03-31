@@ -5,6 +5,13 @@ import Image from "next/image";
 //useRef para mantener referencias a elementos del DOM, como el canvas de firma
 //useState para manejar el estado de la aplicación, como el paso activo, la información del formulario y las firmas
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  formSchema,
+  type ExtraWorkerValues,
+  type HseF001Payload,
+  type SaludValue,
+  type WorkerFormValues,
+} from "./hse-f001.schema";
 
 const sections = [
   { step: 1, title: "Información general del Trabajo" },
@@ -66,17 +73,15 @@ export default function Home() {
   });
 
   //Formulario del trabajador principal
-  const [workerForm, setWorkerForm] = useState({
+  const [workerForm, setWorkerForm] = useState<WorkerFormValues>({
     identificacion: "",
     nombre: "",
     cargo: "",
-    salud: "Seleccione una opcion",
+    salud: "Seleccione una opcion" as SaludValue,
     dificultad: "",
   });
   //Trabajadores adicionales
-  const [extraWorkers, setExtraWorkers] = useState<
-    Array<{ id: number; identificacion: string; salud: string; dificultad: string; signature: string }>
-  >([]);
+  const [extraWorkers, setExtraWorkers] = useState<ExtraWorkerValues[]>([]);
   //Firmas
   const [workerSignature, setWorkerSignature] = useState("");
 
@@ -88,6 +93,8 @@ export default function Home() {
 
   //Estado para manejar errores de validación de la firma del trabajador
   const [workerSignatureError, setWorkerSignatureError] = useState("");
+  const [declarationAccepted, setDeclarationAccepted] = useState(false);
+  const [validationAttempted, setValidationAttempted] = useState(true);
 
   //Referencias para el canvas de firma del trabajador y flags para controlar el estado de dibujo
   const workerCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -110,6 +117,44 @@ export default function Home() {
 
   //Calcular la duración entre hora de inicio y fin, o usar el valor manual si no se pueden calcular
   const durationValue = calcularDuracion(generalInfo.horaInicio, generalInfo.horaFin) || generalInfo.duracion;
+  const payload: HseF001Payload = {
+    generalInfo: {
+      ...generalInfo,
+      duracion: durationValue,
+    },
+    workerForm,
+    extraWorkers: extraWorkers.map((worker) => ({
+      id: worker.id,
+      identificacion: worker.identificacion,
+      salud: worker.salud,
+      dificultad: worker.dificultad,
+      signature: worker.signature,
+    })),
+    signatures: {
+      trabajador: workerSignature,
+      hse: hseSignature,
+      responsable: leaderSignature,
+    },
+    declarationAccepted,
+  };
+  const consolePayload = {
+    ...payload,
+    signatures: {
+      trabajador: summarizeSignatureLink("trabajador", workerSignature),
+      hse: summarizeSignatureLink("hse", hseSignature),
+      responsable: summarizeSignatureLink("responsable", leaderSignature),
+    },
+  };
+  const validationResult = formSchema.safeParse(payload);
+  const isFormValid = validationResult.success;
+  const fieldErrors = validationResult.success
+    ? {}
+    : validationResult.error.issues.reduce<Record<string, string>>((acc, issue) => {
+        const key = issue.path.join(".");
+        if (!acc[key]) acc[key] = issue.message;
+        return acc;
+      }, {});
+  const getError = (path: string) => fieldErrors[path];
 
   //Funciones para manejar la firma del trabajador, redimensionar el canvas, restaurar la firma desde base64
   const getCanvasContext = useCallback(() => workerCanvasRef.current?.getContext("2d") ?? null, []);
@@ -280,27 +325,11 @@ export default function Home() {
 
 //Función para manejar el envío del formulario, recopilando toda la información y las firmas en un objeto payload, mostrando el resultado en la consola y alertando al usuario que el formulario se ha enviado correctamente
   const handleSubmitForm = () => {
-    const payload = {
-      generalInfo: {
-        ...generalInfo,
-        duracion: durationValue,
-      },
-      workerForm,
-      extraWorkers: extraWorkers.map((worker) => ({
-        identificacion: worker.identificacion,
-        salud: worker.salud,
-        dificultad: worker.dificultad,
-        signature: summarizeSignature(worker.signature),
-      })),
-      signatures: {
-        trabajador: summarizeSignature(workerSignature),
-        hse: summarizeSignature(hseSignature),
-        responsable: summarizeSignature(leaderSignature),
-      },
-    };
+    setValidationAttempted(true);
+    if (!isFormValid) return;
 
     console.log("Formulario enviado");
-    console.log(JSON.stringify(payload, null, 2));
+    console.log(JSON.stringify(consolePayload, null, 2));
     window.alert("Formulario enviado correctamente");
   };
 
@@ -310,7 +339,13 @@ export default function Home() {
       const nextId = prev.length > 0 ? prev[prev.length - 1].id + 1 : 2;
       return [
         ...prev,
-        { id: nextId, identificacion: "", salud: "Seleccione una opcion", dificultad: "", signature: "" },
+        {
+          id: nextId,
+          identificacion: "",
+          salud: "Seleccione una opcion" as SaludValue,
+          dificultad: "",
+          signature: "",
+        },
       ];
     });
   };
@@ -324,10 +359,12 @@ export default function Home() {
   const updateWorkerEntry = (
     id: number,
     field: "identificacion" | "salud" | "dificultad" | "signature",
-    value: string
+    value: string | SaludValue
   ) => {
     setExtraWorkers((prev) =>
-      prev.map((worker) => (worker.id === id ? { ...worker, [field]: value } : worker))
+      prev.map((worker) =>
+        worker.id === id ? { ...worker, [field]: value as string } : worker
+      )
     );
   };
 
@@ -343,12 +380,14 @@ export default function Home() {
                   label="LUGAR"
                   value={generalInfo.lugar}
                   placeholder="Ej. Mosquera"
+                  error={validationAttempted ? getError("generalInfo.lugar") : undefined}
                   onChange={(value) => setGeneralInfo((prev) => ({ ...prev, lugar: value }))}
                 />
                 <Field
                   label="FECHA"
                   value={generalInfo.fecha}
                   type="date"
+                  error={validationAttempted ? getError("generalInfo.fecha") : undefined}
                   onChange={(value) => setGeneralInfo((prev) => ({ ...prev, fecha: value }))}
                   helper="Formato AAAA-MM-DD"
                 />
@@ -360,12 +399,14 @@ export default function Home() {
                   label="SE CONCEDE EL PERMISO A"
                   value={generalInfo.responsable}
                   placeholder="Nombre completo"
+                  error={validationAttempted ? getError("generalInfo.responsable") : undefined}
                   onChange={(value) => setGeneralInfo((prev) => ({ ...prev, responsable: value }))}
                 />
                 <Field
                   label="ÁREA"
                   value={generalInfo.area}
                   as="select"
+                  error={validationAttempted ? getError("generalInfo.area") : undefined}
                   onChange={(value) => setGeneralInfo((prev) => ({ ...prev, area: value }))}
                   options={["Producción", "Mantenimiento", "Operaciones", "Calidad", "Otro"]}
                   helper="Selecciona el área más cercana al trabajo."
@@ -374,6 +415,7 @@ export default function Home() {
                   label="CENTRO DE OPERACIÓN"
                   value={generalInfo.centroOperacion}
                   placeholder="Ej. Ammann"
+                  error={validationAttempted ? getError("generalInfo.centroOperacion") : undefined}
                   onChange={(value) => setGeneralInfo((prev) => ({ ...prev, centroOperacion: value }))}
                 />
                 <Field
@@ -381,6 +423,7 @@ export default function Home() {
                   value={generalInfo.tiempoSolicitado}
                   type="number"
                   placeholder="Ej. 96"
+                  error={validationAttempted ? getError("generalInfo.tiempoSolicitado") : undefined}
                   onChange={(value) => setGeneralInfo((prev) => ({ ...prev, tiempoSolicitado: value }))}
                 />
               </div>
@@ -392,6 +435,7 @@ export default function Home() {
                   value={generalInfo.horaInicio}
                   type="time"
                   center
+                  error={validationAttempted ? getError("generalInfo.horaInicio") : undefined}
                   onChange={(value) =>
                     setGeneralInfo((prev) => ({
                       ...prev,
@@ -405,6 +449,7 @@ export default function Home() {
                   value={generalInfo.horaFin}
                   type="time"
                   center
+                  error={validationAttempted ? getError("generalInfo.horaFin") : undefined}
                   onChange={(value) =>
                     setGeneralInfo((prev) => ({
                       ...prev,
@@ -418,6 +463,7 @@ export default function Home() {
                   value={durationValue}
                   readOnly
                   helper="Calculada automáticamente"
+                  error={validationAttempted ? getError("generalInfo.duracion") : undefined}
                 />
               </div>
             </SectionGroup>
@@ -429,6 +475,7 @@ export default function Home() {
                   as="textarea"
                   placeholder="Ej. Mantenimiento de tolvas y silos"
                   full
+                  error={validationAttempted ? getError("generalInfo.descripcion") : undefined}
                   onChange={(value) => setGeneralInfo((prev) => ({ ...prev, descripcion: value }))}
                 />
                 <Field
@@ -437,6 +484,7 @@ export default function Home() {
                   as="textarea"
                   placeholder="Ej. Herramientas manuales, eléctricas, etc."
                   full
+                  error={validationAttempted ? getError("generalInfo.herramientas") : undefined}
                   onChange={(value) => setGeneralInfo((prev) => ({ ...prev, herramientas: value }))}
                   helper="Puedes separar elementos con comas."
                 />
@@ -456,18 +504,21 @@ export default function Home() {
                   label="NÚMERO DE IDENTIFICACIÓN"
                   value={workerForm.identificacion}
                   placeholder="Ej. 1073241989"
+                  error={validationAttempted ? getError("workerForm.identificacion") : undefined}
                   onChange={(value) => setWorkerForm((prev) => ({ ...prev, identificacion: value }))}
                 />
                 <Field
                   label="NOMBRE COMPLETO"
                   value={workerForm.nombre}
                   placeholder="Ej. Juan David Beltran Rodriguez"
+                  error={validationAttempted ? getError("workerForm.nombre") : undefined}
                   onChange={(value) => setWorkerForm((prev) => ({ ...prev, nombre: value }))}
                 />
                 <Field
                   label="CARGO"
                   value={workerForm.cargo}
                   placeholder="Ej. Operador planta de asfalto I"
+                  error={validationAttempted ? getError("workerForm.cargo") : undefined}
                   onChange={(value) => setWorkerForm((prev) => ({ ...prev, cargo: value }))}
                 />
                 <Field
@@ -475,7 +526,8 @@ export default function Home() {
                   value={workerForm.salud}
                   as="select"
                   options={["Seleccione una opcion", "Sí", "No"]}
-                  onChange={(value) => setWorkerForm((prev) => ({ ...prev, salud: value }))}
+                  error={validationAttempted ? getError("workerForm.salud") : undefined}
+                  onChange={(value) => setWorkerForm((prev) => ({ ...prev, salud: value as SaludValue }))}
                 />
                 {workerForm.salud === "No" ? (
                   <Field
@@ -483,6 +535,7 @@ export default function Home() {
                     value={workerForm.dificultad}
                     placeholder="Describe brevemente la condición o dificultad"
                     full
+                    error={validationAttempted ? getError("workerForm.dificultad") : undefined}
                     onChange={(value) => setWorkerForm((prev) => ({ ...prev, dificultad: value }))}
                   />
                 ) : null}
@@ -533,6 +586,7 @@ export default function Home() {
                         label="N° de identificación"
                         value={worker.identificacion}
                         placeholder="Solo números"
+                        error={validationAttempted ? getError(`extraWorkers.${index}.identificacion`) : undefined}
                         onChange={(value) => updateWorkerEntry(worker.id, "identificacion", value)}
                       />
                       <Field
@@ -540,6 +594,7 @@ export default function Home() {
                         value={worker.salud}
                         as="select"
                         options={["Seleccione una opcion", "Sí", "No"]}
+                        error={validationAttempted ? getError(`extraWorkers.${index}.salud`) : undefined}
                         onChange={(value) => updateWorkerEntry(worker.id, "salud", value)}
                       />
                       {worker.salud === "No" ? (
@@ -547,6 +602,7 @@ export default function Home() {
                           label="¿Qué dificultad presenta?"
                           value={worker.dificultad}
                           placeholder="Describe brevemente la condición o dificultad"
+                          error={validationAttempted ? getError(`extraWorkers.${index}.dificultad`) : undefined}
                           onChange={(value) => updateWorkerEntry(worker.id, "dificultad", value)}
                         />
                       ) : null}
@@ -557,6 +613,7 @@ export default function Home() {
                         </div>
                         <SignaturePad
                           value={worker.signature}
+                          error={validationAttempted ? getError(`extraWorkers.${index}.signature`) : undefined}
                           onChange={(value) => updateWorkerEntry(worker.id, "signature", value)}
                         />
                       </div>
@@ -588,14 +645,15 @@ export default function Home() {
               </div>
             </div>
 
-            <Field
-              label="EQUIPOS DE PROTECCIÓN PERSONAL"
-              value={generalInfo.epp}
-              as="textarea"
-              placeholder="Describe los equipos de protección personal a utilizar"
-              full
-              onChange={(value) => setGeneralInfo((prev) => ({ ...prev, epp: value }))}
-            />
+              <Field
+                label="EQUIPOS DE PROTECCIÓN PERSONAL"
+                value={generalInfo.epp}
+                as="textarea"
+                placeholder="Describe los equipos de protección personal a utilizar"
+                full
+                error={validationAttempted ? getError("generalInfo.epp") : undefined}
+                onChange={(value) => setGeneralInfo((prev) => ({ ...prev, epp: value }))}
+              />
 
             <div className="mini-block">
               <div className="flex justify-center">
@@ -609,23 +667,25 @@ export default function Home() {
               </div>
             </div>
 
-            <Field
-              label="EQUIPOS DE RESCATE"
-              value={generalInfo.rescate}
-              as="textarea"
-              placeholder="Describe los equipos de rescate disponibles"
-              full
-              onChange={(value) => setGeneralInfo((prev) => ({ ...prev, rescate: value }))}
-            />
+              <Field
+                label="EQUIPOS DE RESCATE"
+                value={generalInfo.rescate}
+                as="textarea"
+                placeholder="Describe los equipos de rescate disponibles"
+                full
+                error={validationAttempted ? getError("generalInfo.rescate") : undefined}
+                onChange={(value) => setGeneralInfo((prev) => ({ ...prev, rescate: value }))}
+              />
 
-            <Field
-              label="OTROS"
-              value={generalInfo.otros}
-              as="textarea"
-              placeholder="Información adicional"
-              full
-              onChange={(value) => setGeneralInfo((prev) => ({ ...prev, otros: value }))}
-            />
+              <Field
+                label="OTROS"
+                value={generalInfo.otros}
+                as="textarea"
+                placeholder="Información adicional"
+                full
+                error={validationAttempted ? getError("generalInfo.otros") : undefined}
+                onChange={(value) => setGeneralInfo((prev) => ({ ...prev, otros: value }))}
+              />
           </div>
         );
       case 4:
@@ -658,9 +718,16 @@ export default function Home() {
                 </div>
               </div>
               <label className="declaration-check">
-                <input type="checkbox" />
+                <input
+                  type="checkbox"
+                  checked={declarationAccepted}
+                  onChange={(e) => setDeclarationAccepted(e.target.checked)}
+                />
                 <span>Acepto y entiendo la declaración de responsabilidad</span>
               </label>
+              {validationAttempted && fieldErrors.declarationAccepted ? (
+                <p className="field-helper field-helper--error">{fieldErrors.declarationAccepted}</p>
+              ) : null}
 
               <div className="grid gap-6">
                 <div className="soft-card compact-card">
@@ -668,6 +735,7 @@ export default function Home() {
                     label="CÉDULA DEL PERSONAL HSE"
                     value={generalInfo.personal}
                     placeholder="Ej. 321233"
+                    error={validationAttempted ? getError("generalInfo.personal") : undefined}
                     onChange={(value) => setGeneralInfo((prev) => ({ ...prev, personal: value }))}
                   />
                 </div>
@@ -677,11 +745,16 @@ export default function Home() {
                     label="NOMBRE DEL PERSONAL HSE QUE REVISA Y CERTIFICA ESTE PERMISO"
                     value={generalInfo.personalhse}
                     placeholder="Ej. Pepito Pérez"
+                    error={validationAttempted ? getError("generalInfo.personalhse") : undefined}
                     onChange={(value) => setGeneralInfo((prev) => ({ ...prev, personalhse: value }))}
                   />
                   <div className="signature-slot">
                     <div className="mini-title">FIRMA</div>
-                    <SignaturePad value={hseSignature} onChange={setHseSignature} />
+                    <SignaturePad
+                      value={hseSignature}
+                      error={validationAttempted ? getError("signatures.hse") : undefined}
+                      onChange={setHseSignature}
+                    />
                   </div>
                 </div>
               </div>
@@ -699,6 +772,7 @@ export default function Home() {
                     label="CÉDULA DE CIUDADANÍA DEL RESPONSABLE DE LA EJECUCIÓN DEL TRABAJO"
                     value={generalInfo.ciudadania}
                     placeholder="Ej. 32323"
+                    error={validationAttempted ? getError("generalInfo.ciudadania") : undefined}
                     onChange={(value) => setGeneralInfo((prev) => ({ ...prev, ciudadania: value }))}
                   />
                 </div>
@@ -707,12 +781,17 @@ export default function Home() {
                   <Field
                     label="NOMBRE RESPONSABLE EJECUCIÓN DEL TRABAJO"
                     value={generalInfo.trabajador}
-                    placeholder="Ej. 32323"
+                    placeholder="Ej. Pepito Pérez"
+                    error={validationAttempted ? getError("generalInfo.trabajador") : undefined}
                     onChange={(value) => setGeneralInfo((prev) => ({ ...prev, trabajador: value }))}
                   />
                   <div className="signature-slot">
                     <div className="mini-title">FIRMA</div>
-                    <SignaturePad value={leaderSignature} onChange={setLeaderSignature} />
+                    <SignaturePad
+                      value={leaderSignature}
+                      error={validationAttempted ? getError("signatures.responsable") : undefined}
+                      onChange={setLeaderSignature}
+                    />
                   </div>
                 </div>
               </div>
@@ -783,7 +862,8 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleSubmitForm}
-                className="rounded-lg bg-blue-600 px-8 py-4 text-2xl text-white shadow-sm transition-colors hover:bg-blue-700"
+                disabled={!isFormValid}
+                className="rounded-lg bg-blue-600 px-8 py-4 text-2xl text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Enviar formulario
               </button>
@@ -825,6 +905,7 @@ function Field({
   helper,
   readOnly = false,
   options,
+  error,
   onChange,
 }: {
   label: string;
@@ -837,6 +918,7 @@ function Field({
   helper?: string;
   readOnly?: boolean;
   options?: string[];
+  error?: string;
   onChange?: (value: string) => void;
 }) 
 
@@ -846,7 +928,10 @@ function Field({
       <div className="field-shell__label">{label}</div>
       {as === "textarea" ? (
         <textarea
-          className="field-shell__value field-shell__input field-shell__textarea"
+          aria-invalid={Boolean(error)}
+          className={`field-shell__value field-shell__input field-shell__textarea ${
+            error ? "field-shell__input--error" : ""
+          }`}
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange?.(e.target.value)}
@@ -854,7 +939,8 @@ function Field({
         />
       ) : as === "select" ? (
         <select
-          className="field-shell__value field-shell__input"
+          aria-invalid={Boolean(error)}
+          className={`field-shell__value field-shell__input ${error ? "field-shell__input--error" : ""}`}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
         >
@@ -866,7 +952,10 @@ function Field({
         </select>
       ) : onChange ? (
         <input
-          className={`field-shell__value field-shell__input ${center ? "field-shell__value--center" : ""}`}
+          aria-invalid={Boolean(error)}
+          className={`field-shell__value field-shell__input ${center ? "field-shell__value--center" : ""} ${
+            error ? "field-shell__input--error" : ""
+          }`}
           type={type}
           value={value}
           placeholder={placeholder}
@@ -877,6 +966,7 @@ function Field({
         <div className={`field-shell__value ${center ? "field-shell__value--center" : ""}`}>{value}</div>
       )}
       {helper ? <p className="field-helper">{helper}</p> : null}
+      {error ? <p className="field-helper field-helper--error">{error}</p> : null}
     </div>
   );
 }
@@ -902,27 +992,22 @@ function SectionGroup({
   );
 }
 
-// Función para resumir una firma en base64 a una cadena más corta para facilitar su visualización en la consola, indicando si la firma está registrada, su longitud en caracteres y una vista previa de los primeros 32 caracteres de la cadena original
-function summarizeSignature(signature: string) {
-  return signature
-    ? {
-        registrado: true,
-        longitudBase64: signature.length,
-        vistaPrevia: `${signature.slice(0, 32)}...`,
-      }
-    : {
-        registrado: false,
-        longitudBase64: 0,
-        vistaPrevia: "",
-      };
+// Resumir una firma para la consola sin mostrar el base64 completo
+function summarizeSignatureLink(label: string, signature: string) {
+  return {
+    registrado: Boolean(signature),
+    enlace: signature ? `firma://${label}` : "",
+  };
 }
 
 // Componente para manejar la captura de firmas en un canvas, permitiendo al usuario dibujar su firma con el mouse o el dedo, guardar la firma como una imagen en base64 y mostrar un botón para limpiar la firma, con estilos específicos para el canvas y el botón
 function SignaturePad({
   value,
+  error,
   onChange,
 }: {
   value: string;
+  error?: string;
   onChange: (value: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1044,12 +1129,14 @@ function SignaturePad({
     <div className="signature-pad">
       <canvas
         ref={canvasRef}
-        className="signature-canvas signature-canvas--dashed"
+        aria-invalid={Boolean(error)}
+        className={`signature-canvas signature-canvas--dashed ${error ? "field-shell__input--error" : ""}`}
         onPointerDown={startDrawing}
         onPointerMove={draw}
         onPointerUp={stopDrawing}
         onPointerLeave={stopDrawing}
       />
+      {error ? <p className="field-helper field-helper--error">{error}</p> : null}
       <button type="button" className="signature-clear-button" onClick={clearSignature}>
         Limpiar firma
       </button>

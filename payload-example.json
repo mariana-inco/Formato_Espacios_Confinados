@@ -1,0 +1,44 @@
+{
+  "generalInfo": {
+    "lugar": "Mosquera",
+    "fecha": "2026-03-31",
+    "area": "Operaciones",
+    "responsable": "Juan Perez",
+    "centroOperacion": "Ammann",
+    "tiempoSolicitado": "96",
+    "horaInicio": "08:00",
+    "horaFin": "12:00",
+    "duracion": "4 horas",
+    "descripcion": "Mantenimiento de tolvas y silos",
+    "herramientas": "Herramientas manuales y eléctricas",
+    "epp": "Casco, guantes, gafas y botas",
+    "rescate": "Trípode, línea de vida y arnés",
+    "otros": "Ninguno",
+    "personal": "123456789",
+    "personalhse": "Maria Gomez",
+    "ciudadania": "987654321",
+    "trabajador": "Carlos Rodriguez"
+  },
+  "workerForm": {
+    "identificacion": "1073241989",
+    "nombre": "Juan David Beltran Rodriguez",
+    "cargo": "Operador planta de asfalto I",
+    "salud": "Sí",
+    "dificultad": ""
+  },
+  "extraWorkers": [
+    {
+      "id": 2,
+      "identificacion": "100200300",
+      "salud": "Sí",
+      "dificultad": "",
+      "signature": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+    }
+  ],
+  "signatures": {
+    "trabajador": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+    "hse": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+    "responsable": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+  },
+  "declarationAccepted": true
+}
