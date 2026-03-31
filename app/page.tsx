@@ -26,6 +26,7 @@ function calcularDuracion(inicio: string, fin: string) {
 
 export default function Home() {
   const [activeStep, setActiveStep] = useState<StepNumber>(1);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [generalInfo, setGeneralInfo] = useState({
     lugar: "",
     fecha: new Date().toISOString().slice(0, 10),
@@ -68,6 +69,9 @@ export default function Home() {
   const currentSection = sections.find((section) => section.step === activeStep) ?? sections[0];
   const durationValue = calcularDuracion(generalInfo.horaInicio, generalInfo.horaFin) || generalInfo.duracion;
   const getCanvasContext = useCallback(() => workerCanvasRef.current?.getContext("2d") ?? null, []);
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   const restoreSignature = useCallback(
     (firmaBase64: string) => {
@@ -125,6 +129,16 @@ export default function Home() {
     window.addEventListener("resize", resizeWorkerCanvas);
     return () => window.removeEventListener("resize", resizeWorkerCanvas);
   }, [resizeWorkerCanvas]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 500);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (activeStep === 2) {
@@ -665,7 +679,7 @@ export default function Home() {
             </div>
           </div>
           <div className="section-card__body">{renderSection(activeStep)}</div>
-          <div className="flex gap-4 border-t border-slate-200 pt-6">
+          <div className="flex gap-4 border-t border-slate-200 pt-6 pb-8">
             <button
               type="button"
               onClick={prevStep}
@@ -694,6 +708,24 @@ export default function Home() {
           </div>
         </section>
       </div>
+      <button
+        type="button"
+        onClick={scrollToTop}
+        aria-label="Subir al inicio"
+        className={`fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg transition-all duration-300 hover:bg-slate-700 hover:scale-105 ${
+          showScrollTop ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
+        }`}
+      >
+        <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" aria-hidden="true">
+          <path
+            d="M12 19V5m0 0 6 6m-6-6-6 6"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
     </main>
   );
 }
