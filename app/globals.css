@@ -270,8 +270,8 @@ select.field-shell__input {
 .signature-canvas {
   display: block;
   width: 100%;
-  height: 280px;
-  min-height: 280px;
+  height: 180px;
+  min-height: 180px;
   border-radius: 16px;
   background: #fff;
   touch-action: none;
@@ -303,6 +303,18 @@ select.field-shell__input {
   background: #f8fafc;
   transform: translateY(-1px);
 }
+
+.worker-warning {
+  margin-top: 8px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 .signature-status {
   color: #ff0000;
   font-weight: 700;
@@ -379,6 +391,13 @@ select.field-shell__input {
   font-style: italic;
   margin: 0;
 }
+
+.declaration-card__acceptance {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
 .declaration-check {
   display: flex;
   align-items: center;
@@ -587,8 +606,8 @@ select.field-shell__input {
   .declaration-card__title { font-size: 0.98rem; }
   .signature-canvas,
   .signature-box--dashed {
-    height: 220px;
-    min-height: 220px;
+    height: 180px;
+    min-height: 180px;
   }
   .field-shell__textarea { min-height: 104px; }
 }

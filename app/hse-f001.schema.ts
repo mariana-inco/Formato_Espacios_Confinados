@@ -67,11 +67,11 @@ export const formSchema = z.object({
     // Campo opcional para describir la dificultad si la respuesta de salud es "No"
     dificultad: z.string().trim().optional(),
   }).superRefine((value, ctx) => {
-    if (value.salud === "No" && (!value.dificultad || value.dificultad.trim().length < 3)) {
+    if (value.salud === "No") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["dificultad"],
-        message: "Describe la dificultad cuando la respuesta sea No",
+        path: ["salud"],
+        message: "El trabajador no puede realizar la actividad en espacios confinados",
       });
     }
   }),
@@ -89,11 +89,11 @@ export const formSchema = z.object({
       dificultad: z.string().trim().optional(),
       signature: z.string().trim().min(1, "La firma del trabajador adicional es obligatoria"),
     }).superRefine((value, ctx) => {
-      if (value.salud === "No" && (!value.dificultad || value.dificultad.trim().length < 3)) {
+      if (value.salud === "No") {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["dificultad"],
-          message: "Describe la dificultad cuando la respuesta sea No",
+          path: ["salud"],
+          message: "El trabajador no puede realizar la actividad en espacios confinados",
         });
       }
     })
