@@ -193,7 +193,7 @@ export default function Home() {
                 <SectionGroup title="Ubicación y fechas" description="Completa primero el lugar y la fecha del permiso.">
                   <div className="info-grid info-grid--two">
                     <Field label="LUGAR" error={getErrorByPath(errors, "generalInfo.lugar")?.message} {...register("generalInfo.lugar")} placeholder="Ej. Mosquera" />
-                    <Field label="FECHA" type="date" error={getErrorByPath(errors, "generalInfo.fecha")?.message} {...register("generalInfo.fecha")} helper="Formato AAAA-MM-DD" />
+                    <Field label="FECHA" type="date" error={getErrorByPath(errors, "generalInfo.fecha")?.message} {...register("generalInfo.fecha")} />
                   </div>
                 </SectionGroup>
 

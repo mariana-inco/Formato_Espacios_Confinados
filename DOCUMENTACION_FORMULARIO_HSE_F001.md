@@ -51,7 +51,7 @@ Responsabilidades:
 2. Al dar clic en `Siguiente`, se valida solo esa sección.
 3. Si hay errores, no avanza.
 4. Si no hay errores, pasa a la siguiente sección.
-5. En la última sección, al dar clic en `Enviar formulario`, se arma un JSON limpio y organizado.
+5. En la última sección, al dar clic en `Enviar formulario`, se arma un JSON organizado.
 6. Ese JSON se imprime por consola.
 
 ## Funciones principales
