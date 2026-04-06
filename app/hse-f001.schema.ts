@@ -63,15 +63,13 @@ export const formSchema = z.object({
       .refine((value) => value !== "Seleccione una opcion", {
         message: "Selecciona si está en buen estado de salud",
       }),
-
-    // Campo opcional para describir la dificultad si la respuesta de salud es "No"
-    dificultad: z.string().trim().optional(),
+    observacion: z.string().trim().optional(),
   }).superRefine((value, ctx) => {
-    if (value.salud === "No") {
+    if (value.salud === "No" && !value.observacion?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["salud"],
-        message: "El trabajador no puede realizar la actividad en espacios confinados",
+        path: ["observacion"],
+        message: "Debes registrar la observación del estado de salud",
       });
     }
   }),
@@ -86,14 +84,21 @@ export const formSchema = z.object({
         .refine((value) => value !== "Seleccione una opcion", {
           message: "Selecciona Sí o No",
         }),
-      dificultad: z.string().trim().optional(),
-      signature: z.string().trim().min(1, "La firma del trabajador adicional es obligatoria"),
+      observacion: z.string().trim().optional(),
+      signature: z.string().trim().optional(),
     }).superRefine((value, ctx) => {
-      if (value.salud === "No") {
+      if (value.salud === "No" && !value.observacion?.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["salud"],
-          message: "El trabajador no puede realizar la actividad en espacios confinados",
+          path: ["observacion"],
+          message: "Debes registrar la observación del estado de salud",
+        });
+      }
+      if (value.salud !== "No" && !value.signature?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["signature"],
+          message: "La firma del trabajador adicional es obligatoria",
         });
       }
     })
@@ -101,13 +106,21 @@ export const formSchema = z.object({
 
   // Esquema para las firmas, asegurando que todas las firmas requeridas estén presentes
   signatures: z.object({
-    trabajador: z.string().trim().min(1, "La firma del trabajador es obligatoria"),
+    trabajador: z.string().trim().optional(),
     hse: z.string().trim().min(1, "La firma del personal HSE es obligatoria"),
     responsable: z.string().trim().min(1, "La firma del responsable es obligatoria"),
   }),
   declarationAccepted: z.boolean().refine((value) => value, {
     message: "Debes aceptar la declaración de responsabilidad",
   }),
+}).superRefine((value, ctx) => {
+  if (value.workerForm.salud !== "No" && !value.signatures.trabajador?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["signatures", "trabajador"],
+      message: "La firma del trabajador es obligatoria",
+    });
+  }
 });
 
 export type SaludValue = z.infer<typeof formSchema.shape.workerForm.shape.salud>;
@@ -116,14 +129,14 @@ export type WorkerFormValues = {
   nombre: string;
   cargo: string;
   salud: SaludValue;
-  dificultad: string;
+  observacion?: string;
 };
 
 export type ExtraWorkerValues = {
   id: number;
   identificacion: string;
   salud: SaludValue;
-  dificultad: string;
+  observacion?: string;
   signature: string;
 };
 export type HseF001Payload = z.infer<typeof formSchema>;

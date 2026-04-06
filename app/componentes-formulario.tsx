@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Signature from "@uiw/react-signature/canvas";
+import type { SignatureCanvasRef } from "@uiw/react-signature/canvas";
 import { useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
 import type { SaludValue } from "./hse-f001.schema";
 import { Button } from "../components/ui/button";
@@ -105,14 +106,13 @@ export function SectionGroup({
 
 export function SignatureField({ value, error, onChange, onClear }: { value: string; error?: string; onChange: (value: string) => void; onClear: () => void; }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const signatureRef = useRef<SignatureCanvasRef | null>(null);
   const [points, setPoints] = useState<Record<string, number[][]>>({});
-  const [renderKey, setRenderKey] = useState(0);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-  const restoredPoints = useMemo(() => parseSignaturePoints(value), [value]);
 
   useEffect(() => {
     const updateSize = () => {
-      const width = wrapperRef.current?.clientWidth ?? 0;
+      const width = Math.round(wrapperRef.current?.clientWidth ?? 0);
       if (!width) return;
       setCanvasSize({ width, height: 180 });
     };
@@ -122,28 +122,27 @@ export function SignatureField({ value, error, onChange, onClear }: { value: str
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    setPoints(restoredPoints);
-  }, [restoredPoints]);
-
   const handlePointer = (strokePoints: number[][]) => {
     if (strokePoints.length === 0) return;
     const pathKey = `path-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setPoints((prev) => ({ ...prev, [pathKey]: strokePoints }));
-    onChange(JSON.stringify(strokePoints));
-    setRenderKey((current) => current + 1);
+    window.setTimeout(() => {
+      const nextValue = signatureRef.current?.canvas?.toDataURL("image/png") ?? "";
+      if (nextValue) onChange(nextValue);
+    }, 0);
   };
 
   const clearSignature = () => {
+    signatureRef.current?.clear();
     setPoints({});
     onClear();
-    setRenderKey((current) => current + 1);
   };
 
   return (
     <div className="signature-pad" ref={wrapperRef}>
       <Signature
-        key={renderKey}
+        key={canvasSize.width}
+        ref={signatureRef}
         readonly={false}
         defaultPoints={points}
         width={canvasSize.width || undefined}
@@ -182,6 +181,12 @@ export function ExtraWorkerCard({
   const health = useWatch({ control, name: `${base}.salud` as const }) as SaludValue | undefined;
   const signatureValue = useWatch({ control, name: `${base}.signature` as const }) ?? "";
 
+  useEffect(() => {
+    if (health === "No" && signatureValue) {
+      setValue(`${base}.signature` as never, "" as never, { shouldValidate: false });
+    }
+  }, [base, health, setValue, signatureValue]);
+
   return (
     <div className="soft-card compact-card">
       <div className="declaration-card__head worker-extra__head">
@@ -198,22 +203,30 @@ export function ExtraWorkerCard({
           <option value="No">No</option>
         </SelectField>
         {health === "No" ? (
-          <TextareaField label="¿Qué dificultad presenta?" error={getErrorByPath(errors, `${base}.dificultad`)?.message} {...register(`${base}.dificultad` as never)} placeholder="Describe brevemente la condición o dificultad" />
+          <>
+            <TextareaField
+              label="OBSERVACIÓN DEL ESTADO DE SALUD"
+              full
+              error={getErrorByPath(errors, `${base}.observacion`)?.message}
+              {...register(`${base}.observacion` as never)}
+              placeholder="Describe la observación o trazabilidad"
+            />
+            <div className="worker-warning" role="alert">
+              <strong>Observación requerida:</strong> registra el motivo por el cual el trabajador no está en buen estado de salud.
+            </div>
+          </>
         ) : null}
-        {health === "No" ? (
-          <div className="worker-warning" role="alert">
-            <strong>Alerta:</strong> el trabajador no puede realizar la actividad en espacios confinados.
+        {health !== "No" ? (
+          <div className="signature-slot">
+            <div className="mini-title">FIRMA DEL TRABAJADOR</div>
+            <SignatureField
+              value={signatureValue}
+              error={getErrorByPath(errors, `${base}.signature`)?.message}
+              onChange={(value) => setValue(`${base}.signature` as never, value as never, { shouldValidate: validationAttempted })}
+              onClear={() => setValue(`${base}.signature` as never, "" as never, { shouldValidate: validationAttempted })}
+            />
           </div>
         ) : null}
-        <div className="signature-slot">
-          <div className="mini-title">FIRMA DEL TRABAJADOR</div>
-          <SignatureField
-            value={signatureValue}
-            error={getErrorByPath(errors, `${base}.signature`)?.message}
-            onChange={(value) => setValue(`${base}.signature` as never, value as never, { shouldValidate: validationAttempted })}
-            onClear={() => setValue(`${base}.signature` as never, "" as never, { shouldValidate: validationAttempted })}
-          />
-        </div>
       </div>
     </div>
   );
@@ -227,15 +240,4 @@ export function getErrorByPath(errors: Record<string, unknown>, path: string): {
     current = (current as Record<string, unknown>)[part];
   }
   return current as { message?: string } | undefined;
-}
-
-function parseSignaturePoints(value: string) {
-  if (!value) return {};
-  try {
-    const parsed = JSON.parse(value) as number[][];
-    if (!Array.isArray(parsed)) return {};
-    return { restored: parsed } as Record<string, number[][]>;
-  } catch {
-    return {} as Record<string, number[][]>;
-  }
 }

@@ -1,6 +1,6 @@
 # Formulario HSE - Documentación
 
-## 📋 Estructura del Formulario
+## Estructura del Formulario
 
 Componente completo desarrollado en **NextJS + React + Tailwind** sin dependencias externas de formularios.
 
@@ -11,12 +11,12 @@ Componente completo desarrollado en **NextJS + React + Tailwind** sin dependenci
 ### Nivel 1: Validaciones Requeridas (Críticas)
 Se ejecutan en `handleSubmit()` antes de permitir envío:
 
-- **lugar_fecha**: No puede estar vacío ❌
-- **area**: No puede estar vacía ❌
-- **centro_operacion**: No puede estar vacío ❌
-- **trabajadores**: Mínimo 1 trabajador requerido ❌
-- **responsable_nombre**: No puede estar vacío ❌
-
+- **lugar_fecha**: No puede estar vacío 
+- **area**: No puede estar vacía 
+- **centro_operacion**: No puede estar vacío 
+- **trabajadores**: Mínimo 1 trabajador requerido 
+- **responsable_nombre**: No puede estar vacío 
+- 
 Si alguno de estos campos falta, muestra alerta con lista de errores.
 
 ### Nivel 2: Validaciones en Agregar
@@ -31,7 +31,7 @@ Se ejecutan cuando usuario intenta agregar trabajador o medición:
 
 ---
 
-## 📊 Estructura de Estados (useState)
+## Estructura de Estados (useState)
 
 ```typescript
 // SECCIÓN 1: Información General
@@ -100,7 +100,7 @@ seccionFinal: {
 
 ---
 
-## 📤 JSON de Salida
+## JSON de Salida
 
 Al hacer submit con validaciones pasadas, genera:
 
@@ -125,31 +125,31 @@ Se imprime en console y se muestra alerta.
 
 ---
 
-## 🎯 Funcionalidades
+## Funcionalidades
 
-✅ **Gestión de Trabajadores**
+ **Gestión de Trabajadores**
 - Agregar trabajador (validación de nombre + identificación)
 - Eliminar trabajador
 - Mostrar lista actual
 
-✅ **Gestión de Monitoreo**
+ **Gestión de Monitoreo**
 - Agregar medición (validación de resultado)
 - Eliminar medición
 - Mostrar lista actual
 
-✅ **Campos Dinámicos**
+ **Campos Dinámicos**
 - Todos los inputs actualizan estado en tiempo real
 - Checkboxes para estado de salud
 - Radio buttons para verificación diaria
 - Select para tipo de medición y estado
 
-✅ **Botones de Acción**
+ **Botones de Acción**
 - ENVIAR FORMULARIO: Valida + genera JSON
 - LIMPIAR: Recarga página (reset completo)
 
 ---
 
-## 🔧 Instrucciones de Uso
+## Instrucciones de Uso
 
 1. Completar **Sección 1** (información general)
 2. Agregar mínimo **1 trabajador** en Sección 2
@@ -162,7 +162,7 @@ Se imprime en console y se muestra alerta.
 
 ---
 
-## 🚀 Ejecutar
+## Ejecutar
 
 ```bash
 npm run dev
@@ -171,7 +171,7 @@ npm run dev
 
 ---
 
-## 📝 Notas Técnicas
+## Notas Técnicas
 
 - Sin librerías de formularios (Formik, React Hook Form, etc)
 - 100% React Hooks (useState)

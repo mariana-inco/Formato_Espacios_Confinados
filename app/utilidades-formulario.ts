@@ -37,7 +37,7 @@ export const defaultValues: FormValues = {
     nombre: "",
     cargo: "",
     salud: "Seleccione una opcion" as SaludValue,
-    dificultad: "",
+    observacion: "",
   },
   extraWorkers: [],
   signatures: {
@@ -62,7 +62,7 @@ export const stepFields: Record<StepNumber, string[]> = {
     "generalInfo.descripcion",
     "generalInfo.herramientas",
   ],
-  2: ["workerForm.identificacion", "workerForm.nombre", "workerForm.cargo", "workerForm.salud", "workerForm.dificultad", "signatures.trabajador"],
+  2: ["workerForm.identificacion", "workerForm.nombre", "workerForm.cargo", "workerForm.salud", "workerForm.observacion", "signatures.trabajador"],
   3: ["generalInfo.epp", "generalInfo.rescate", "generalInfo.otros"],
   4: [
     "generalInfo.personal",

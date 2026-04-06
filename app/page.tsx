@@ -57,6 +57,12 @@ export default function Home() {
     setValue("generalInfo.duracion", durationValue, { shouldValidate: validationAttempted });
   }, [durationValue, setValue, validationAttempted]);
 
+  useEffect(() => {
+    if (workerForm.salud === "No") {
+      setValue("signatures.trabajador", "", { shouldValidate: false });
+    }
+  }, [setValue, workerForm.salud]);
+
   // Cuando cambiamos de paso, enfocamos la sección activa para no perder contexto.
   useEffect(() => {
     if (!sectionContentRef.current) return;
@@ -114,14 +120,14 @@ export default function Home() {
         nombre: values.workerForm.nombre,
         cargo: values.workerForm.cargo,
         salud: values.workerForm.salud,
-        dificultad: values.workerForm.dificultad,
+        observacion: values.workerForm.observacion,
       }),
       extraWorkers: values.extraWorkers.map((worker) =>
         compactObject({
           id: worker.id,
           identificacion: worker.identificacion,
           salud: worker.salud,
-          dificultad: worker.dificultad,
+          observacion: worker.observacion,
           signature: summarizeSignatureLink(`extra-${worker.id}`, worker.signature),
         })
       ),
@@ -142,7 +148,7 @@ export default function Home() {
       id: extraWorkerFields.length > 0 ? extraWorkerFields[extraWorkerFields.length - 1].id + 1 : 2,
       identificacion: "",
       salud: "Seleccione una opcion" as SaludValue,
-      dificultad: "",
+      observacion: "",
       signature: "",
     });
   };
@@ -243,26 +249,37 @@ export default function Home() {
                       <option value="No">No</option>
                     </SelectField>
                     {workerForm.salud === "No" ? (
-                      <TextareaField label="¿Qué dificultad presenta?" full error={getErrorByPath(errors, "workerForm.dificultad")?.message} {...register("workerForm.dificultad")} placeholder="Describe brevemente la condición o dificultad" />
+                      <TextareaField
+                        label="OBSERVACIÓN DEL ESTADO DE SALUD"
+                        full
+                        error={getErrorByPath(errors, "workerForm.observacion")?.message}
+                        {...register("workerForm.observacion")}
+                        placeholder="Describe la observación o trazabilidad"
+                      />
                     ) : null}
                   </div>
 
-                  {/* Si marca "No", mostramos una alerta clara y bloqueante para el trabajador principal. */}
                   {workerForm.salud === "No" ? (
                     <div className="worker-warning" role="alert">
-                      <strong>Alerta:</strong> el trabajador no puede realizar la actividad en espacios confinados.
+                      <strong>Observación requerida:</strong> registra el motivo por el cual el trabajador no está en buen estado de salud.
                     </div>
                   ) : null}
 
-                  <div className="signature-slot">
-                    <div className="mini-title">FIRMA DEL TRABAJADOR</div>
-                    <SignatureField
-                      value={workerSignature}
-                      error={getErrorByPath(errors, "signatures.trabajador")?.message}
-                      onChange={(value) => setValue("signatures.trabajador", value, { shouldValidate: validationAttempted })}
-                      onClear={() => setValue("signatures.trabajador", "", { shouldValidate: validationAttempted })}
-                    />
-                  </div>
+                  {workerForm.salud !== "No" ? (
+                    <div className="signature-slot">
+                      <div className="mini-title">FIRMA DEL TRABAJADOR</div>
+                      <SignatureField
+                        value={workerSignature}
+                        error={getErrorByPath(errors, "signatures.trabajador")?.message}
+                        onChange={(value) => setValue("signatures.trabajador", value, { shouldValidate: validationAttempted })}
+                        onClear={() => setValue("signatures.trabajador", "", { shouldValidate: validationAttempted })}
+                      />
+                    </div>
+                  ) : (
+                    <div className="worker-warning" role="alert">
+                      <strong>Firma no disponible:</strong> el trabajador no puede firmar porque no se encuentra en buen estado de salud.
+                    </div>
+                  )}
 
                   <div className="worker-actions">
                     <div className="worker-actions__row worker-actions__row--full">
@@ -390,7 +407,7 @@ export default function Home() {
                 Siguiente
               </Button>
             ) : (
-              <Button type="submit" variant="primary" disabled={Object.keys(errors).length > 0}>
+              <Button type="submit" variant="primary">
                 Enviar formulario
               </Button>
             )}
