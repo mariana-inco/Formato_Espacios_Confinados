@@ -4,14 +4,14 @@ import React, { useEffect, useRef, useState } from "react";
 import Signature from "@uiw/react-signature/canvas";
 import type { SignatureCanvasRef } from "@uiw/react-signature/canvas";
 import { useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
-import type { SaludValue } from "./hse-f001.schema";
+import type { ValorSalud } from "./hse-f001.schema";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
-import { type FormValues } from "./utilidades-formulario";
+import { type ValoresFormulario } from "./utilidades-formulario";
 
-export function Field({
+export function CampoSimple({
   label,
   error,
   helper,
@@ -39,7 +39,7 @@ export function Field({
   );
 }
 
-export function TextareaField({
+export function CampoArea({
   label,
   error,
   helper,
@@ -62,7 +62,7 @@ export function TextareaField({
   );
 }
 
-export function SelectField({
+export function CampoSeleccion({
   label,
   error,
   children,
@@ -84,7 +84,7 @@ export function SelectField({
   );
 }
 
-export function SectionGroup({
+export function GrupoSecciones({
   title,
   description,
   children,
@@ -104,7 +104,21 @@ export function SectionGroup({
   );
 }
 
-export function SignatureField({ value, error, onChange, onClear }: { value: string; error?: string; onChange: (value: string) => void; onClear: () => void; }) {
+export function CampoFirma({
+  value,
+  error,
+  onChange,
+  onClear,
+  compact = false,
+  clearLabel = "Limpiar firma",
+}: {
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+  onClear: () => void;
+  compact?: boolean;
+  clearLabel?: string;
+}) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const signatureRef = useRef<SignatureCanvasRef | null>(null);
   const [points, setPoints] = useState<Record<string, number[][]>>({});
@@ -114,13 +128,13 @@ export function SignatureField({ value, error, onChange, onClear }: { value: str
     const updateSize = () => {
       const width = Math.round(wrapperRef.current?.clientWidth ?? 0);
       if (!width) return;
-      setCanvasSize({ width, height: 180 });
+      setCanvasSize({ width, height: compact ? 110 : 180 });
     };
     updateSize();
     const observer = new ResizeObserver(updateSize);
     if (wrapperRef.current) observer.observe(wrapperRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [compact]);
 
   const handlePointer = (strokePoints: number[][]) => {
     if (strokePoints.length === 0) return;
@@ -139,7 +153,7 @@ export function SignatureField({ value, error, onChange, onClear }: { value: str
   };
 
   return (
-    <div className="signature-pad" ref={wrapperRef}>
+    <div className={`signature-pad ${compact ? "signature-pad--compact" : ""}`} ref={wrapperRef}>
       <Signature
         key={canvasSize.width}
         ref={signatureRef}
@@ -147,20 +161,24 @@ export function SignatureField({ value, error, onChange, onClear }: { value: str
         defaultPoints={points}
         width={canvasSize.width || undefined}
         height={canvasSize.height || undefined}
-        className={`signature-canvas signature-canvas--dashed ${error ? "field-shell__input--error" : ""}`}
+        className={`signature-canvas signature-canvas--dashed ${compact ? "signature-canvas--compact" : ""} ${error ? "field-shell__input--error" : ""}`}
         onPointer={handlePointer}
-        style={{ width: "100%", height: canvasSize.height ? `${canvasSize.height}px` : "180px" }}
+        style={{ width: "100%", height: canvasSize.height ? `${canvasSize.height}px` : compact ? "110px" : "180px" }}
       />
-      {value ? <p className="signature-status signature-status--success">✓ Firma registrada</p> : <p className="signature-status">⏳ Pendiente</p>}
+      {value ? (
+        <p className={`signature-status signature-status--success ${compact ? "signature-status--compact" : ""}`}>✓ Firma registrada</p>
+      ) : (
+        <p className={`signature-status ${compact ? "signature-status--compact" : ""}`}>⏳ Pendiente</p>
+      )}
       {error ? <p className="field-helper field-helper--error">{error}</p> : null}
-      <Button type="button" variant="secondary" onClick={clearSignature} className="signature-clear-button">
-        Limpiar firma
+      <Button type="button" variant="secondary" onClick={clearSignature} className={`signature-clear-button ${compact ? "signature-clear-button--compact" : ""}`}>
+        {clearLabel}
       </Button>
     </div>
   );
 }
 
-export function ExtraWorkerCard({
+export function TarjetaTrabajadorExtra({
   index,
   control,
   errors,
@@ -170,15 +188,21 @@ export function ExtraWorkerCard({
   validationAttempted,
 }: {
   index: number;
-  control: Control<FormValues>;
-  errors: FieldErrors<FormValues>;
-  register: UseFormRegister<FormValues>;
+  control: Control<ValoresFormulario>;
+  errors: FieldErrors<ValoresFormulario>;
+  register: UseFormRegister<ValoresFormulario>;
   remove: (index: number) => void;
-  setValue: UseFormSetValue<FormValues>;
+  setValue: UseFormSetValue<ValoresFormulario>;
   validationAttempted: boolean;
 }) {
   const base = `extraWorkers.${index}` as const;
-  const health = useWatch({ control, name: `${base}.salud` as const }) as SaludValue | undefined;
+  const health = useWatch({ control, name: `${base}.salud` as const }) as ValorSalud | undefined;
+  const name = useWatch({ control, name: `${base}.nombre` as const }) as string | undefined;
+  const cargo = useWatch({ control, name: `${base}.cargo` as const }) as string | undefined;
+  const observation = useWatch({
+    control,
+    name: `${base}.observacion` as never,
+  }) as string | undefined;
   const signatureValue = useWatch({ control, name: `${base}.signature` as const }) ?? "";
 
   useEffect(() => {
@@ -190,25 +214,28 @@ export function ExtraWorkerCard({
   return (
     <div className="soft-card compact-card">
       <div className="declaration-card__head worker-extra__head">
-        <h3 className="declaration-card__title">TRABAJADOR {index + 2}</h3>
+        <h3 className="declaration-card__title">ÍTEM {index + 2}</h3>
         <Button type="button" variant="ghost" onClick={() => remove(index)} className="worker-extra__remove">
           Eliminar
         </Button>
       </div>
       <div className="grid gap-6">
-        <Field label="N° de identificación" error={getErrorByPath(errors, `${base}.identificacion`)?.message} {...register(`${base}.identificacion` as never)} placeholder="Solo números" />
-        <SelectField label="¿Se encuentra en buen estado de salud?" error={getErrorByPath(errors, `${base}.salud`)?.message} {...register(`${base}.salud` as never)}>
-          <option value="Seleccione una opcion">Seleccione una opcion</option>
+        <CampoSimple label="NOMBRE COMPLETO" error={obtenerErrorPorRuta(errors, `${base}.nombre`)?.message} {...register(`${base}.nombre` as never)} placeholder="Nombre completo" value={name ?? undefined} />
+        <CampoSimple label="N° de identificación" error={obtenerErrorPorRuta(errors, `${base}.identificacion`)?.message} {...register(`${base}.identificacion` as never)} placeholder="Solo números" />
+        <CampoSimple label="CARGO" error={obtenerErrorPorRuta(errors, `${base}.cargo`)?.message} {...register(`${base}.cargo` as never)} placeholder="Cargo o función" value={cargo ?? undefined} />
+        <CampoSeleccion label="¿Se encuentra en buen estado de salud?" error={obtenerErrorPorRuta(errors, `${base}.salud`)?.message} {...register(`${base}.salud` as never)}>
+          <option value="Seleccione una opción">Seleccione una opción</option>
           <option value="Sí">Sí</option>
           <option value="No">No</option>
-        </SelectField>
+        </CampoSeleccion>
         {health === "No" ? (
           <>
-            <TextareaField
+            <CampoArea
               label="OBSERVACIÓN DEL ESTADO DE SALUD"
               full
-              error={getErrorByPath(errors, `${base}.observacion`)?.message}
-              {...register(`${base}.observacion` as never)}
+              error={obtenerErrorPorRuta(errors, `${base}.observacion`)?.message}
+              value={observation ?? ""}
+              onChange={(event) => setValue(`${base}.observacion` as never, event.target.value as never, { shouldValidate: validationAttempted })}
               placeholder="Describe la observación o trazabilidad"
             />
             <div className="worker-warning" role="alert">
@@ -219,9 +246,9 @@ export function ExtraWorkerCard({
         {health !== "No" ? (
           <div className="signature-slot">
             <div className="mini-title">FIRMA DEL TRABAJADOR</div>
-            <SignatureField
+            <CampoFirma
               value={signatureValue}
-              error={getErrorByPath(errors, `${base}.signature`)?.message}
+              error={obtenerErrorPorRuta(errors, `${base}.signature`)?.message}
               onChange={(value) => setValue(`${base}.signature` as never, value as never, { shouldValidate: validationAttempted })}
               onClear={() => setValue(`${base}.signature` as never, "" as never, { shouldValidate: validationAttempted })}
             />
@@ -232,7 +259,48 @@ export function ExtraWorkerCard({
   );
 }
 
-export function getErrorByPath(errors: Record<string, unknown>, path: string): { message?: string } | undefined {
+export function TarjetaRolAprobacion({
+  index,
+  control,
+  errors,
+  register,
+  setValue,
+  validationAttempted,
+}: {
+  index: number;
+  control: Control<ValoresFormulario>;
+  errors: FieldErrors<ValoresFormulario>;
+  register: UseFormRegister<ValoresFormulario>;
+  setValue: UseFormSetValue<ValoresFormulario>;
+  validationAttempted: boolean;
+}) {
+  const base = `approvalPeople.${index}` as const;
+  const role = useWatch({ control, name: `${base}.role` as const }) as string | undefined;
+  const signatureValue = useWatch({ control, name: `${base}.signature` as const }) ?? "";
+
+  return (
+    <div className="soft-card compact-card">
+      <div className="declaration-card__head worker-extra__head">
+        <h3 className="declaration-card__title">{role || `ROL ${index + 1}`}</h3>
+      </div>
+      <div className="grid gap-6">
+        <CampoSimple label="NOMBRE COMPLETO" error={obtenerErrorPorRuta(errors, `${base}.nombre`)?.message} {...register(`${base}.nombre` as never)} placeholder="Nombre completo" />
+        <CampoSimple label="NÚMERO DE IDENTIFICACIÓN" error={obtenerErrorPorRuta(errors, `${base}.identificacion`)?.message} {...register(`${base}.identificacion` as never)} placeholder="Solo números" />
+        <div className="signature-slot">
+          <div className="mini-title">FIRMA</div>
+          <CampoFirma
+            value={signatureValue}
+            error={obtenerErrorPorRuta(errors, `${base}.signature`)?.message}
+            onChange={(value) => setValue(`${base}.signature` as never, value as never, { shouldValidate: validationAttempted })}
+            onClear={() => setValue(`${base}.signature` as never, "" as never, { shouldValidate: validationAttempted })}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function obtenerErrorPorRuta(errors: Record<string, unknown>, path: string): { message?: string } | undefined {
   const parts = path.split(".");
   let current: unknown = errors;
   for (const part of parts) {

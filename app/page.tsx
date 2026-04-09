@@ -1,25 +1,192 @@
 "use client";
 
-import React from "react";
+/**
+ * Página principal del formulario HSE F001
+ * Esta página implementa un formulario multi-paso para permisos de trabajo seguro,
+ * utilizando React Hook Form con validación Zod para asegurar la integridad de los datos.
+ */
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { useFieldArray, useForm, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { formSchema, type SaludValue } from "./hse-f001.schema";
+import { esquemaFormulario, type ValorSalud } from "./hse-f001.schema";
 import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
-import { compactObject, calcularDuracion, defaultValues, sections, stepFields, summarizeSignatureLink, type FormValues, type StepNumber } from "./utilidades-formulario";
-import { ExtraWorkerCard, Field, SectionGroup, SelectField, SignatureField, TextareaField, getErrorByPath } from "./componentes-formulario";
+import { Input } from "../components/ui/input";
+import {
+  compactarObjeto,
+  compactarObjetoSeleccion,
+  calcularDuracion,
+  valoresDefecto,
+  obtenerCamposPorPaso,
+  definicionesMonitoreo,
+  gruposMedidasSeguridad,
+  sections,
+  resumirEnlaceFirma,
+  type ValoresFormulario,
+  type NumeroPaso,
+} from "./utilidades-formulario";
+import { TarjetaRolAprobacion, TarjetaTrabajadorExtra, CampoSimple, GrupoSecciones, CampoSeleccion, CampoFirma, CampoArea, obtenerErrorPorRuta } from "./componentes-formulario";
 
+/**
+ * Componente para una fila de medida de seguridad
+ * Renderiza opciones de radio para NA, SI, NO para cada medida de control
+ */
+function SafetyMeasureRow({
+  name,
+  label,
+  register,
+}: {
+  name: string;
+  label: string;
+  register: UseFormRegister<ValoresFormulario>;
+}) {
+  const options = ["NA", "SI", "NO"] as const;
+
+  return (
+    <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 md:grid-cols-[minmax(0,1.45fr)_repeat(3,minmax(72px,auto))] md:items-center">
+      <div className="text-sm font-medium leading-6 text-slate-700">{label}</div>
+      {options.map((option) => (
+        <label
+          key={option}
+          className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-sky-300 hover:bg-sky-50"
+        >
+          <input type="radio" value={option} {...register(name as never)} className="h-4 w-4 accent-sky-600" />
+          <span>{option}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function MonitoringCell({
+  children,
+  error,
+}: {
+  children: React.ReactNode;
+  error?: string;
+}) {
+  return (
+    <div className="monitoring-table__cell">
+      {children}
+      {error ? <p className="field-helper field-helper--error monitoring-table__cell-error">{error}</p> : null}
+    </div>
+  );
+}
+
+function MonitoringSignatureCell({
+  path,
+  control,
+  errors,
+  setValue,
+  validationAttempted,
+}: {
+  path: string;
+  control: Control<ValoresFormulario>;
+  errors: FieldErrors<ValoresFormulario>;
+  setValue: UseFormSetValue<ValoresFormulario>;
+  validationAttempted: boolean;
+}) {
+  const signatureValue = (useWatch({ control, name: path as never }) ?? "") as string;
+
+  return (
+    <div className="monitoring-table__cell monitoring-table__cell--signature">
+      <CampoFirma
+        compact
+        clearLabel="Limpiar"
+        value={signatureValue}
+        error={obtenerErrorPorRuta(errors, path)?.message}
+        onChange={(value) => setValue(path as never, value as never, { shouldValidate: validationAttempted })}
+        onClear={() => setValue(path as never, "" as never, { shouldValidate: validationAttempted })}
+      />
+    </div>
+  );
+}
+
+/**
+ * Componente para una fila de la tabla de monitoreo
+ * Maneja la entrada de datos para cada definición de monitoreo (gas, condiciones, etc.)
+ */
+function MonitoringTableRow({
+  definition,
+  rowIndex,
+  register,
+  control,
+  errors,
+  setValue,
+  validationAttempted,
+}: {
+  definition: (typeof definicionesMonitoreo)[number];
+  rowIndex: number;
+  register: UseFormRegister<ValoresFormulario>;
+  control: Control<ValoresFormulario>;
+  errors: FieldErrors<ValoresFormulario>;
+  setValue: UseFormSetValue<ValoresFormulario>;
+  validationAttempted: boolean;
+}) {
+  const takeIndexes = [0, 1] as const;
+
+  return (
+    <tr className="monitoring-table__row">
+      <th scope="row" className="monitoring-table__row-label">
+        {definition.label}
+      </th>
+      <td className="monitoring-table__condition">{definition.helper}</td>
+      {takeIndexes.map((takeIndex) => {
+        const base = `monitoring.rows.${rowIndex}.takes.${takeIndex}` as const;
+        const datePath = `${base}.fecha`;
+        const timePath = `${base}.hora`;
+        const resultPath = `${base}.resultado`;
+        const signaturePath = `${base}.signature`;
+
+        return (
+          <React.Fragment key={`${definition.key}-${takeIndex}`}>
+            <td>
+              <MonitoringCell error={obtenerErrorPorRuta(errors, datePath)?.message}>
+                <Input type="date" {...register(datePath as never)} className="monitoring-table__input monitoring-table__input--date" aria-invalid={Boolean(obtenerErrorPorRuta(errors, datePath)?.message)} />
+              </MonitoringCell>
+            </td>
+            <td>
+              <MonitoringCell error={obtenerErrorPorRuta(errors, timePath)?.message}>
+                <Input type="time" {...register(timePath as never)} className="monitoring-table__input monitoring-table__input--time" aria-invalid={Boolean(obtenerErrorPorRuta(errors, timePath)?.message)} />
+              </MonitoringCell>
+            </td>
+            <td>
+              <MonitoringCell error={obtenerErrorPorRuta(errors, resultPath)?.message}>
+                <Input type="text" inputMode="decimal" placeholder="Ej. 21.0" {...register(resultPath as never)} className="monitoring-table__input monitoring-table__input--result" aria-invalid={Boolean(obtenerErrorPorRuta(errors, resultPath)?.message)} />
+              </MonitoringCell>
+            </td>
+            <td>
+              <MonitoringSignatureCell
+                path={signaturePath}
+                control={control}
+                errors={errors}
+                setValue={setValue}
+                validationAttempted={validationAttempted}
+              />
+            </td>
+          </React.Fragment>
+        );
+      })}
+    </tr>
+  );
+}
+
+/**
+ * Componente principal de la página del formulario HSE F001
+ * Gestiona el estado del formulario multi-paso, validación y navegación entre secciones
+ */
 export default function Home() {
-  // Estado del wizard: paso actual, validación mostrada y botón flotante.
-  const [activeStep, setActiveStep] = useState<StepNumber>(1);
+  // Estados para controlar el paso activo, scroll y validación
+  const [activeStep, setActiveStep] = useState<NumeroPaso>(1);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [validationAttempted, setValidationAttempted] = useState(false);
 
+  // Referencia para el contenido de la sección actual
   const sectionContentRef = useRef<HTMLDivElement | null>(null);
 
-  // React Hook Form centraliza todos los campos del formulario.
+  // Configuración del formulario con React Hook Form y validación Zod
   const {
     register,
     control,
@@ -28,20 +195,21 @@ export default function Home() {
     trigger,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues,
+  } = useForm<ValoresFormulario>({
+    resolver: zodResolver(esquemaFormulario),
+    defaultValues: valoresDefecto,
     mode: "onTouched",
   });
 
+  // Campo de array para trabajadores extra
   const { fields: extraWorkerFields, append, remove } = useFieldArray({
     control,
     name: "extraWorkers",
   });
 
-  // `useWatch` nos deja reaccionar a cambios sin duplicar estado manual.
-  const generalInfo = useWatch({ control, name: "generalInfo" }) ?? defaultValues.generalInfo;
-  const workerForm = useWatch({ control, name: "workerForm" }) ?? defaultValues.workerForm;
+  const generalInfo = useWatch({ control, name: "generalInfo" }) ?? valoresDefecto.generalInfo;
+  const workerForm = useWatch({ control, name: "workerForm" }) ?? valoresDefecto.workerForm;
+  const workerObservacion = useWatch({ control, name: "workerForm.observacion" as const }) ?? "";
   const declarationAccepted = useWatch({ control, name: "declarationAccepted" }) ?? false;
   const workerSignature = useWatch({ control, name: "signatures.trabajador" }) ?? "";
   const hseSignature = useWatch({ control, name: "signatures.hse" }) ?? "";
@@ -52,7 +220,6 @@ export default function Home() {
     [generalInfo.duracion, generalInfo.horaFin, generalInfo.horaInicio]
   );
 
-  // Mantiene sincronizada la duración calculada con el formulario.
   useEffect(() => {
     setValue("generalInfo.duracion", durationValue, { shouldValidate: validationAttempted });
   }, [durationValue, setValue, validationAttempted]);
@@ -63,7 +230,6 @@ export default function Home() {
     }
   }, [setValue, workerForm.salud]);
 
-  // Cuando cambiamos de paso, enfocamos la sección activa para no perder contexto.
   useEffect(() => {
     if (!sectionContentRef.current) return;
     window.requestAnimationFrame(() => {
@@ -78,24 +244,35 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Al enviar, armamos un JSON limpio y organizado por secciones.
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
+  /**
+   * Avanza al siguiente paso del formulario, validando los campos del paso actual
+   */
   const nextStep = async () => {
-    // Antes de avanzar, validamos solo los campos del paso actual.
     setValidationAttempted(true);
-    const ok = await trigger(stepFields[activeStep] as never, { shouldFocus: true });
-    if (!ok) return;
-    setActiveStep((value) => (Math.min(value + 1, 4) as StepNumber));
+    const values = getValues();
+    const fields = obtenerCamposPorPaso(activeStep, values);
+    if (fields.length > 0) {
+      const ok = await trigger(fields as never, { shouldFocus: true });
+      if (!ok) return;
+    }
+    setActiveStep((value) => (Math.min(value + 1, sections.length) as NumeroPaso));
   };
 
-  const prevStep = () => setActiveStep((value) => (Math.max(value - 1, 1) as StepNumber));
+  /**
+   * Retrocede al paso anterior del formulario
+   */
+  const prevStep = () => setActiveStep((value) => (Math.max(value - 1, 1) as NumeroPaso));
+
+  const setWorkerObservation = (value: string) => {
+    setValue("workerForm.observacion" as never, value as never, { shouldValidate: validationAttempted });
+  };
 
   const onSubmit = handleSubmit(() => {
-    // Construimos la salida final con los datos capturados por secciones.
     const values = getValues();
     const consolePayload = {
-      generalInfo: compactObject({
+      generalInfo: compactarObjeto({
         lugar: values.generalInfo.lugar,
         fecha: values.generalInfo.fecha,
         area: values.generalInfo.area,
@@ -115,7 +292,7 @@ export default function Home() {
         ciudadania: values.generalInfo.ciudadania,
         trabajador: values.generalInfo.trabajador,
       }),
-      workerForm: compactObject({
+      workerForm: compactarObjeto({
         identificacion: values.workerForm.identificacion,
         nombre: values.workerForm.nombre,
         cargo: values.workerForm.cargo,
@@ -123,18 +300,50 @@ export default function Home() {
         observacion: values.workerForm.observacion,
       }),
       extraWorkers: values.extraWorkers.map((worker) =>
-        compactObject({
+        compactarObjeto({
           id: worker.id,
           identificacion: worker.identificacion,
+          nombre: worker.nombre,
+          cargo: worker.cargo,
           salud: worker.salud,
           observacion: worker.observacion,
-          signature: summarizeSignatureLink(`extra-${worker.id}`, worker.signature),
+          signature: resumirEnlaceFirma(`extra-${worker.id}`, worker.signature),
         })
       ),
-      signatures: compactObject({
-        trabajador: summarizeSignatureLink("trabajador", values.signatures.trabajador),
-        hse: summarizeSignatureLink("hse", values.signatures.hse),
-        responsable: summarizeSignatureLink("responsable", values.signatures.responsable),
+      safetyChecks: compactarObjetoSeleccion(values.safetyChecks as Record<string, string>),
+      monitoring: compactarObjeto({
+        rows: values.monitoring.rows.map((row, rowIndex) =>
+          compactarObjeto({
+            gas: definicionesMonitoreo[rowIndex]?.label ?? `Fila ${rowIndex + 1}`,
+            condiciones: definicionesMonitoreo[rowIndex]?.helper ?? "",
+            takes: row.takes.map((take, takeIndex) =>
+              compactarObjeto({
+                fecha: take.fecha,
+                hora: take.hora,
+                resultado: take.resultado,
+                signature: resumirEnlaceFirma(`monitoring-${rowIndex + 1}-${takeIndex + 1}`, take.signature),
+              })
+            ),
+          })
+        ),
+        equipoMedicion: values.monitoring.equipoMedicion,
+      }),
+      approvalPeople: values.approvalPeople.map((person) =>
+        compactarObjeto({
+          role: person.role,
+          nombre: person.nombre,
+          identificacion: person.identificacion,
+          signature: resumirEnlaceFirma(person.role, person.signature),
+        })
+      ),
+      signatures: compactarObjeto({
+        trabajador: resumirEnlaceFirma("trabajador", values.signatures.trabajador),
+        hse: resumirEnlaceFirma("hse", values.signatures.hse),
+        responsable: resumirEnlaceFirma("responsable", values.signatures.responsable),
+      }),
+      observaciones: compactarObjeto({
+        observaciones: values.observaciones,
+        cierreCancelacion: values.cierreCancelacion,
       }),
       declarationAccepted: values.declarationAccepted,
     };
@@ -144,10 +353,13 @@ export default function Home() {
   });
 
   const addWorkerEntry = () => {
+    const nextId = extraWorkerFields.length + 2;
     append({
-      id: extraWorkerFields.length > 0 ? extraWorkerFields[extraWorkerFields.length - 1].id + 1 : 2,
+      id: nextId,
       identificacion: "",
-      salud: "Seleccione una opcion" as SaludValue,
+      nombre: "",
+      cargo: "",
+      salud: "Seleccione una opción" as ValorSalud,
       observacion: "",
       signature: "",
     });
@@ -155,11 +367,14 @@ export default function Home() {
 
   const stepTitle = sections.find((section) => section.step === activeStep)?.title ?? sections[0].title;
   const progress = (activeStep / sections.length) * 100;
-  const hasCurrentErrors = stepFields[activeStep].some((path) => Boolean(getErrorByPath(errors, path)));
+  const currentStepFields = obtenerCamposPorPaso(activeStep, getValues());
+  const hasCurrentErrors = currentStepFields.some((path) => Boolean(obtenerErrorPorRuta(errors, path)));
 
   return (
+    // Estructura principal de la página con header, formulario y navegación
     <main className="page-shell">
       <div className="page-frame">
+        {/* Header del documento con logo y metadatos */}
         <section className="doc-top">
           <div className="doc-header-table">
             <div className="doc-header-logo">
@@ -170,13 +385,20 @@ export default function Home() {
               <div className="doc-header-title-main">PERMISO PARA TRABAJOS EN ESPACIOS CONFINADOS</div>
             </div>
             <div className="doc-header-meta">
-              <div><strong>Codigo:</strong> HSE-F001</div>
-              <div><strong>Fecha:</strong> 2026-03-26</div>
-              <div><strong>Version:</strong> 08</div>
+              <div>
+                <strong>Codigo:</strong> HSE-F001
+              </div>
+              <div>
+                <strong>Fecha:</strong> 2026-03-26
+              </div>
+              <div>
+                <strong>Version:</strong> 08
+              </div>
             </div>
           </div>
         </section>
 
+        {/* Formulario principal con navegación por pasos */}
         <form className="section-card" onSubmit={onSubmit}>
           <div className="border-b border-slate-300 bg-slate-50 p-6">
             <div className="mb-3 flex items-center justify-between">
@@ -196,90 +418,93 @@ export default function Home() {
           <div ref={sectionContentRef} className="section-card__body">
             {activeStep === 1 ? (
               <div className="space-y-6">
-                <SectionGroup title="Ubicación y fechas" description="Completa primero el lugar y la fecha del permiso.">
+                <GrupoSecciones title="LUGAR Y FECHA" description="Completa la ubicación principal del trabajo y su fecha de emisión.">
                   <div className="info-grid info-grid--two">
-                    <Field label="LUGAR" error={getErrorByPath(errors, "generalInfo.lugar")?.message} {...register("generalInfo.lugar")} placeholder="Ej. Mosquera" />
-                    <Field label="FECHA" type="date" error={getErrorByPath(errors, "generalInfo.fecha")?.message} {...register("generalInfo.fecha")} />
+                    <CampoSimple label="LUGAR" error={obtenerErrorPorRuta(errors, "generalInfo.lugar")?.message} {...register("generalInfo.lugar")} placeholder="Ej. Mosquera" />
+                    <CampoSimple label="FECHA" type="date" error={obtenerErrorPorRuta(errors, "generalInfo.fecha")?.message} {...register("generalInfo.fecha")} />
                   </div>
-                </SectionGroup>
+                </GrupoSecciones>
 
-                <SectionGroup title="Persona y operación" description="Identifica a quién se concede el permiso y dónde se ejecutará.">
+                <GrupoSecciones title="ÁREA Y PERMISO" description="Identifica a quién se concede el permiso y dónde se ejecutará.">
                   <div className="info-grid info-grid--two">
-                    <Field label="SE CONCEDE EL PERMISO A" error={getErrorByPath(errors, "generalInfo.responsable")?.message} {...register("generalInfo.responsable")} placeholder="Nombre completo" />
-                    <SelectField label="ÁREA" error={getErrorByPath(errors, "generalInfo.area")?.message} {...register("generalInfo.area")}>
+                    <CampoSeleccion label="ÁREA" error={obtenerErrorPorRuta(errors, "generalInfo.area")?.message} {...register("generalInfo.area")}>
                       <option value="">Selecciona una opción</option>
                       <option value="Producción">Producción</option>
                       <option value="Mantenimiento">Mantenimiento</option>
                       <option value="Operaciones">Operaciones</option>
                       <option value="Calidad">Calidad</option>
                       <option value="Otro">Otro</option>
-                    </SelectField>
-                    <Field label="CENTRO DE OPERACIÓN" error={getErrorByPath(errors, "generalInfo.centroOperacion")?.message} {...register("generalInfo.centroOperacion")} placeholder="Ej. Ammann" />
-                    <Field label="TIEMPO SOLICITADO (HORAS)" type="number" error={getErrorByPath(errors, "generalInfo.tiempoSolicitado")?.message} {...register("generalInfo.tiempoSolicitado")} placeholder="Ej. 96" />
+                    </CampoSeleccion>
+                    <CampoSimple label="SE CONCEDE EL PERMISO A" error={obtenerErrorPorRuta(errors, "generalInfo.responsable")?.message} {...register("generalInfo.responsable")} placeholder="Nombre completo" />
+                    <CampoSimple label="CENTRO DE OPERACIÓN" error={obtenerErrorPorRuta(errors, "generalInfo.centroOperacion")?.message} {...register("generalInfo.centroOperacion")} placeholder="Ej. Planta principal" />
+                    <CampoSimple label="DURACIÓN ESTIMADA DEL TRABAJO (HORAS)" type="number" error={obtenerErrorPorRuta(errors, "generalInfo.tiempoSolicitado")?.message} {...register("generalInfo.tiempoSolicitado")} placeholder="Ej. 8" />
                   </div>
-                </SectionGroup>
+                </GrupoSecciones>
 
-                <SectionGroup title="Horario y duración" description="Si completas hora de inicio y fin, la duración se actualiza automáticamente.">
+                <GrupoSecciones title="HORARIO Y DESCRIPCIÓN" description="Registra el tiempo de ejecución, la actividad y las herramientas necesarias.">
                   <div className="info-grid info-grid--three">
-                    <Field label="DE LAS" type="time" center error={getErrorByPath(errors, "generalInfo.horaInicio")?.message} {...register("generalInfo.horaInicio")} />
-                    <Field label="A LAS" type="time" center error={getErrorByPath(errors, "generalInfo.horaFin")?.message} {...register("generalInfo.horaFin")} />
-                    <Field label="DURACIÓN ESTIMADA" value={durationValue} readOnly helper="Calculada automáticamente" error={getErrorByPath(errors, "generalInfo.duracion")?.message} />
+                    <CampoSimple label="DE LAS" type="time" center error={obtenerErrorPorRuta(errors, "generalInfo.horaInicio")?.message} {...register("generalInfo.horaInicio")} />
+                    <CampoSimple label="A LAS" type="time" center error={obtenerErrorPorRuta(errors, "generalInfo.horaFin")?.message} {...register("generalInfo.horaFin")} />
+                    <CampoSimple label="DURACIÓN CALCULADA" value={durationValue} readOnly helper="Se actualiza automáticamente" error={obtenerErrorPorRuta(errors, "generalInfo.duracion")?.message} />
                   </div>
-                </SectionGroup>
-
-                <SectionGroup title="Detalles del trabajo" description="Describe la actividad y las herramientas necesarias.">
-                  <div className="space-y-4">
-                    <TextareaField label="DESCRIPCIÓN DE LA ACTIVIDAD A REALIZAR" full error={getErrorByPath(errors, "generalInfo.descripcion")?.message} {...register("generalInfo.descripcion")} placeholder="Ej. Mantenimiento de tolvas y silos" />
-                    <TextareaField label="HERRAMIENTAS A UTILIZAR DURANTE LA TAREA" full error={getErrorByPath(errors, "generalInfo.herramientas")?.message} {...register("generalInfo.herramientas")} placeholder="Ej. Herramientas manuales, eléctricas, etc." helper="Puedes separar elementos con comas." />
+                  <div className="space-y-4 pt-4">
+                    <CampoArea label="DESCRIPCION DE LA ACTIVIDAD A REALIZAR" full error={obtenerErrorPorRuta(errors, "generalInfo.descripcion")?.message} {...register("generalInfo.descripcion")} placeholder="Describe la actividad a ejecutar" />
+                    <CampoArea label="HERRAMIENTAS A UTILIZAR DURANTE LA TAREA" full error={obtenerErrorPorRuta(errors, "generalInfo.herramientas")?.message} {...register("generalInfo.herramientas")} placeholder="Lista las herramientas y equipos" helper="Puedes separar elementos con comas." />
                   </div>
-                </SectionGroup>
+                </GrupoSecciones>
               </div>
             ) : null}
 
             {activeStep === 2 ? (
               <div className="space-y-8">
-                <SectionGroup title="CUADRO DE RESPONSABLES QUE REALIZARÁN LA ACTIVIDAD EN ESPACIOS CONFINADOS" description="Marque sí o no según corresponda.">
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <Field label="NÚMERO DE IDENTIFICACIÓN" error={getErrorByPath(errors, "workerForm.identificacion")?.message} {...register("workerForm.identificacion")} placeholder="Ej. 1073241989" />
-                    <Field label="NOMBRE COMPLETO" error={getErrorByPath(errors, "workerForm.nombre")?.message} {...register("workerForm.nombre")} placeholder="Ej. Juan David Beltran Rodriguez" />
-                    <Field label="CARGO" error={getErrorByPath(errors, "workerForm.cargo")?.message} {...register("workerForm.cargo")} placeholder="Ej. Operador planta de asfalto I" />
-                    <SelectField label="¿SE ENCUENTRA EN BUEN ESTADO DE SALUD?" error={getErrorByPath(errors, "workerForm.salud")?.message} {...register("workerForm.salud")}>
-                      <option value="Seleccione una opcion">Seleccione una opcion</option>
-                      <option value="Sí">Sí</option>
-                      <option value="No">No</option>
-                    </SelectField>
+                <GrupoSecciones title="CUADRO DE TRABAJADORES RESPONSABLES QUE REALIZARAN LA ACTIVIDAD EN ESPACIOS CONFINADOS" description="Marque SI o NO según corresponda y agregue cada responsable.">
+                  <div className="soft-card compact-card">
+                    <div className="declaration-card__head worker-extra__head">
+                      <h3 className="declaration-card__title">ÍTEM 1</h3>
+                    </div>
+                    <div className="grid gap-6">
+                      <CampoSimple label="NOMBRE COMPLETO" error={obtenerErrorPorRuta(errors, "workerForm.nombre")?.message} {...register("workerForm.nombre")} placeholder="Nombre completo" />
+                      <CampoSimple label="NÚMERO DE IDENTIFICACIÓN" error={obtenerErrorPorRuta(errors, "workerForm.identificacion")?.message} {...register("workerForm.identificacion")} placeholder="Solo números" />
+                      <CampoSimple label="CARGO" error={obtenerErrorPorRuta(errors, "workerForm.cargo")?.message} {...register("workerForm.cargo")} placeholder="Cargo o función" />
+                      <CampoSeleccion label="¿SE ENCUENTRA EN BUEN ESTADO DE SALUD PARA REALIZAR LA ACTIVIDAD?" error={obtenerErrorPorRuta(errors, "workerForm.salud")?.message} {...register("workerForm.salud")}>
+                        <option value="Seleccione una opción">Seleccione una opción</option>
+                        <option value="Sí">Sí</option>
+                        <option value="No">No</option>
+                      </CampoSeleccion>
+                      {workerForm.salud === "No" ? (
+                        <CampoArea
+                          label="OBSERVACIÓN DEL ESTADO DE SALUD"
+                          full
+                          error={obtenerErrorPorRuta(errors, "workerForm.observacion")?.message}
+                          value={workerObservacion}
+                          onChange={(event) => setWorkerObservation(event.target.value)}
+                          placeholder="Describe la observación o trazabilidad"
+                        />
+                      ) : null}
+                    </div>
+
                     {workerForm.salud === "No" ? (
-                      <TextareaField
-                        label="OBSERVACIÓN DEL ESTADO DE SALUD"
-                        full
-                        error={getErrorByPath(errors, "workerForm.observacion")?.message}
-                        {...register("workerForm.observacion")}
-                        placeholder="Describe la observación o trazabilidad"
-                      />
+                      <div className="worker-warning" role="alert">
+                        <strong>Observación requerida:</strong> registra el motivo por el cual el trabajador no está en buen estado de salud.
+                      </div>
                     ) : null}
+
+                    {workerForm.salud !== "No" ? (
+                      <div className="signature-slot">
+                        <div className="mini-title">FIRMA</div>
+                        <CampoFirma
+                          value={workerSignature}
+                          error={obtenerErrorPorRuta(errors, "signatures.trabajador")?.message}
+                          onChange={(value) => setValue("signatures.trabajador", value, { shouldValidate: validationAttempted })}
+                          onClear={() => setValue("signatures.trabajador", "", { shouldValidate: validationAttempted })}
+                        />
+                      </div>
+                    ) : (
+                      <div className="worker-warning" role="alert">
+                        <strong>Firma no disponible:</strong> el trabajador no puede firmar porque no se encuentra en buen estado de salud.
+                      </div>
+                    )}
                   </div>
-
-                  {workerForm.salud === "No" ? (
-                    <div className="worker-warning" role="alert">
-                      <strong>Observación requerida:</strong> registra el motivo por el cual el trabajador no está en buen estado de salud.
-                    </div>
-                  ) : null}
-
-                  {workerForm.salud !== "No" ? (
-                    <div className="signature-slot">
-                      <div className="mini-title">FIRMA DEL TRABAJADOR</div>
-                      <SignatureField
-                        value={workerSignature}
-                        error={getErrorByPath(errors, "signatures.trabajador")?.message}
-                        onChange={(value) => setValue("signatures.trabajador", value, { shouldValidate: validationAttempted })}
-                        onClear={() => setValue("signatures.trabajador", "", { shouldValidate: validationAttempted })}
-                      />
-                    </div>
-                  ) : (
-                    <div className="worker-warning" role="alert">
-                      <strong>Firma no disponible:</strong> el trabajador no puede firmar porque no se encuentra en buen estado de salud.
-                    </div>
-                  )}
 
                   <div className="worker-actions">
                     <div className="worker-actions__row worker-actions__row--full">
@@ -291,7 +516,7 @@ export default function Home() {
 
                   <div className="space-y-6 pt-4">
                     {extraWorkerFields.map((worker, index) => (
-                      <ExtraWorkerCard
+                      <TarjetaTrabajadorExtra
                         key={worker.id}
                         index={index}
                         control={control}
@@ -303,37 +528,172 @@ export default function Home() {
                       />
                     ))}
                   </div>
-                </SectionGroup>
+                </GrupoSecciones>
               </div>
             ) : null}
 
             {activeStep === 3 ? (
               <div className="space-y-8">
-                <div className="mini-block mini-block--header">
-                  <div className="mini-title mini-title--bar">RELACIONE LOS EPP A UTILIZAR Y EL EQUIPO DE RESCATE DISPONIBLE</div>
-                </div>
-                <div className="mini-block">
-                  <div className="flex justify-center">
-                    <Image src="/EPP.png" alt="Equipos de Protección Personal" width={1200} height={700} className="max-h-72 w-full max-w-3xl rounded-2xl object-contain" />
-                  </div>
-                </div>
-                <TextareaField label="EQUIPOS DE PROTECCIÓN PERSONAL" full error={getErrorByPath(errors, "generalInfo.epp")?.message} {...register("generalInfo.epp")} placeholder="Describe los equipos de protección personal a utilizar" />
-                <div className="mini-block">
-                  <div className="flex justify-center">
-                    <Image src="/kit-de-rescate.png" alt="Equipos de rescate" width={1200} height={700} className="max-h-72 w-full max-w-3xl rounded-2xl object-contain" />
-                  </div>
-                </div>
-                <TextareaField label="EQUIPOS DE RESCATE" full error={getErrorByPath(errors, "generalInfo.rescate")?.message} {...register("generalInfo.rescate")} placeholder="Describe los equipos de rescate disponibles" />
-                <TextareaField label="OTROS" full error={getErrorByPath(errors, "generalInfo.otros")?.message} {...register("generalInfo.otros")} placeholder="Información adicional" />
+                {gruposMedidasSeguridad.map((group) => (
+                  <GrupoSecciones
+                    key={group.title}
+                    title={group.title}
+                    description="Marca SI, NO o NA según corresponda para cada condición de control."
+                  >
+                    <div className="space-y-3">
+                      <div className="grid gap-3 rounded-2xl bg-slate-100 px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-[minmax(0,1.45fr)_repeat(3,minmax(72px,auto))]">
+                        <div>Condición</div>
+                        <div className="text-center">NA</div>
+                        <div className="text-center">SI</div>
+                        <div className="text-center">NO</div>
+                      </div>
+                      {group.items.map((item) => (
+                        <SafetyMeasureRow key={item.key} name={`safetyChecks.${item.key}`} label={item.label} register={register} />
+                      ))}
+                    </div>
+                  </GrupoSecciones>
+                ))}
               </div>
             ) : null}
 
             {activeStep === 4 ? (
               <div className="space-y-8">
+                <div className="permit-warning-card" role="note" aria-label="Advertencia del permiso">
+                  <div className="permit-warning-card__head">
+                    Este permiso NO debe otorgarse si alguna de las anteriores condiciones no se está cumpliendo
+                  </div>
+                  <div className="permit-warning-card__note">
+                    <span>Nota:</span> En caso de tormentas, lloviznas suaves y/o vientos, se deben suspender los trabajos.
+                  </div>
+                </div>
+
+                <div className="pst-heading">PROCEDIMIENTO SEGURO DE TRABAJO (PST)</div>
+
+                <GrupoSecciones
+                  title="RESULTADOS MONITOREO AMBIENTAL Y VALIDACIONES (Funcionario de Higiene y Seguridad y Salud en el Trabajo)"
+                  description="Registra las dos tomas dentro de la misma tabla, con fecha, hora, resultado y firma digital en cada bloque."
+                >
+                  <div className="monitoring-table-shell">
+                    <div className="monitoring-table-scroll">
+                      <table className="monitoring-table">
+                        <colgroup>
+                          <col className="monitoring-table__col monitoring-table__col--gas" />
+                          <col className="monitoring-table__col monitoring-table__col--condition" />
+                          <col className="monitoring-table__col monitoring-table__col--date" />
+                          <col className="monitoring-table__col monitoring-table__col--time" />
+                          <col className="monitoring-table__col monitoring-table__col--result" />
+                          <col className="monitoring-table__col monitoring-table__col--signature" />
+                          <col className="monitoring-table__col monitoring-table__col--date" />
+                          <col className="monitoring-table__col monitoring-table__col--time" />
+                          <col className="monitoring-table__col monitoring-table__col--result" />
+                          <col className="monitoring-table__col monitoring-table__col--signature" />
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            <th scope="col">Gases y temperatura</th>
+                            <th scope="col">Condiciones aceptables</th>
+                            <th scope="col">FECHA</th>
+                            <th scope="col">HORA</th>
+                            <th scope="col">RESULTADO</th>
+                            <th scope="col">FIRMA</th>
+                            <th scope="col">FECHA</th>
+                            <th scope="col">HORA</th>
+                            <th scope="col">RESULTADO</th>
+                            <th scope="col">FIRMA</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {definicionesMonitoreo.map((definition, rowIndex) => (
+                            <MonitoringTableRow
+                              key={definition.key}
+                              definition={definition}
+                              rowIndex={rowIndex}
+                              register={register}
+                              control={control}
+                              errors={errors}
+                              setValue={setValue}
+                              validationAttempted={validationAttempted}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <p className="monitoring-table__note">
+                      P.P.M = Partículas por millón. LII = limite de inflamabilidad inferior. WGBT = Temperatura de globo; bulbo húmedo y bulbo seco.
+                    </p>
+                  </div>
+
+                  <div className="pt-4">
+                    <CampoSimple
+                      label="EQUIPO DE MEDICIÓN A UTILIZAR"
+                      error={obtenerErrorPorRuta(errors, "monitoring.equipoMedicion")?.message}
+                      {...register("monitoring.equipoMedicion")}
+                      placeholder="Ej. Detector multigás"
+                    />
+                  </div>
+                </GrupoSecciones>
+              </div>
+            ) : null}
+
+            {activeStep === 5 ? (
+              <div className="space-y-8">
+                <GrupoSecciones title="RELACIONE LOS EPP A UTILIZAR Y EQUIPO DE RESCATE DISPOPNIBLE" description="Registra los elementos de protección y rescate aplicables para la tarea.">
+                  <div className="space-y-4">
+                    <div className="soft-card compact-card">
+                      <div className="flex justify-center">
+                        <Image
+                          src="/EPP.png"
+                          alt="Equipos de Protección Personal"
+                          width={1200}
+                          height={700}
+                          className="max-h-72 w-full max-w-3xl rounded-2xl object-contain"
+                        />
+                      </div>
+                    </div>
+                    <CampoArea
+                      label="EQUIPOS DE PROTECCIÓN PERSONAL"
+                      full
+                      error={obtenerErrorPorRuta(errors, "generalInfo.epp")?.message}
+                      {...register("generalInfo.epp")}
+                      placeholder="Describe los EPP que se utilizarán"
+                    />
+                    <div className="soft-card compact-card">
+                      <div className="flex justify-center">
+                        <Image
+                          src="/kit-de-rescate.png"
+                          alt="Equipos de rescate"
+                          width={1200}
+                          height={700}
+                          className="max-h-72 w-full max-w-3xl rounded-2xl object-contain"
+                        />
+                      </div>
+                    </div>
+                    <CampoArea
+                      label="EQUIPOS DE RESCATE"
+                      full
+                      error={obtenerErrorPorRuta(errors, "generalInfo.rescate")?.message}
+                      {...register("generalInfo.rescate")}
+                      placeholder="Describe los equipos de rescate disponibles"
+                    />
+                    <CampoArea
+                      label="OTROS"
+                      full
+                      error={obtenerErrorPorRuta(errors, "generalInfo.otros")?.message}
+                      {...register("generalInfo.otros")}
+                      placeholder="Información adicional"
+                    />
+                  </div>
+                </GrupoSecciones>
+              </div>
+            ) : null}
+
+            {activeStep === 6 ? (
+              <div className="space-y-8">
                 <section className="declaration-card">
                   <div className="declaration-card__head">
                     <span className="declaration-card__icon">⚠</span>
-                    <h3 className="declaration-card__title">TÉRMINO DE RESPONSABILIDADES Y AUTORIZACIÓN PARA EJECUCIÓN DE TRABAJOS</h3>
+                    <h3 className="declaration-card__title">TERMINO DE RESPONSABILIDADES Y AUTORIZACION PARA EJECUCION DE TRABAJOS</h3>
                   </div>
                   <div className="declaration-card__body">
                     <p className="declaration-card__lead">DECLARO</p>
@@ -345,9 +705,7 @@ export default function Home() {
                     </p>
                     <div className="declaration-card__acceptance">
                       <div className="mini-block">
-                        <div className="mini-title">
-                          DECLARO QUE HE REVISADO EL ÁREA Y CERTIFICO QUE SE HAN TOMADO LAS PRECAUCIONES INDICADAS PARA DAR INICIO AL TRABAJO
-                        </div>
+                        <div className="mini-title">DECLARO QUE HE REVISADO EL ÁREA Y CERTIFICO QUE SE HAN TOMADO LAS PRECAUCIONES INDICADAS PARA DAR INICIO AL TRABAJO</div>
                       </div>
                       <label className="declaration-check">
                         <Checkbox
@@ -356,22 +714,52 @@ export default function Home() {
                         />
                         <span>Acepto y entiendo la declaración de responsabilidad</span>
                       </label>
+                      <div className="declaration-card__closure-grid" aria-label="Cierre de declaración">
+                        <div className="declaration-card__closure-item">
+                          <p className="declaration-card__closure-text">
+                            <span className="declaration-card__closure-strong">Yo,</span>
+                            <span className="declaration-card__blank-line" aria-hidden="true" />
+                            he revisado el área y certifico que se han tomado las precauciones indicadas para dar inicio al trabajo.
+                          </p>
+                        </div>
+                        <div className="declaration-card__closure-item declaration-card__closure-item--right">
+                          <p className="declaration-card__closure-text declaration-card__closure-text--center">
+                            Acataremos las normas, procedimientos y recomendaciones mencionados por el personal HSE, para el seguro desarrollo de la labor.
+                          </p>
+                          <p className="declaration-card__closure-label">Nombre, Firma y C.C. del responsable de la ejecución del trabajo</p>
+                        </div>
+                      </div>
                       {validationAttempted && errors.declarationAccepted ? <p className="field-helper field-helper--error">{errors.declarationAccepted.message}</p> : null}
                     </div>
                   </div>
                 </section>
 
-                <div className="grid gap-6">
+                <div className="grid gap-6 xl:grid-cols-2">
                   <div className="soft-card compact-card">
-                    <Field label="CÉDULA DEL PERSONAL HSE" error={getErrorByPath(errors, "generalInfo.personal")?.message} {...register("generalInfo.personal")} placeholder="Ej. 321233" />
-                  </div>
-                  <div className="soft-card compact-card">
-                    <Field label="NOMBRE DEL PERSONAL HSE QUE REVISA Y CERTIFICA ESTE PERMISO" error={getErrorByPath(errors, "generalInfo.personalhse")?.message} {...register("generalInfo.personalhse")} placeholder="Ej. Pepito Pérez" />
+                    <div className="mb-4">
+                      <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">
+                        PERSONAL HSE QUE REVISA Y CERTIFICA ESTE PERMISO
+                      </h3>
+                    </div>
+                    <div className="info-grid info-grid--two">
+                      <CampoSimple
+                        label="CÉDULA DEL PERSONAL HSE"
+                        error={obtenerErrorPorRuta(errors, "generalInfo.personal")?.message}
+                        {...register("generalInfo.personal")}
+                        placeholder="Ej. 321233"
+                      />
+                      <CampoSimple
+                        label="NOMBRE DEL PERSONAL HSE"
+                        error={obtenerErrorPorRuta(errors, "generalInfo.personalhse")?.message}
+                        {...register("generalInfo.personalhse")}
+                        placeholder="Ej. Pepito Pérez"
+                      />
+                    </div>
                     <div className="signature-slot">
                       <div className="mini-title">FIRMA</div>
-                      <SignatureField
+                      <CampoFirma
                         value={hseSignature}
-                        error={getErrorByPath(errors, "signatures.hse")?.message}
+                        error={obtenerErrorPorRuta(errors, "signatures.hse")?.message}
                         onChange={(value) => setValue("signatures.hse", value, { shouldValidate: validationAttempted })}
                         onClear={() => setValue("signatures.hse", "", { shouldValidate: validationAttempted })}
                       />
@@ -379,21 +767,69 @@ export default function Home() {
                   </div>
 
                   <div className="soft-card compact-card">
-                    <Field label="CÉDULA DE CIUDADANÍA DEL RESPONSABLE DE LA EJECUCIÓN DEL TRABAJO" error={getErrorByPath(errors, "generalInfo.ciudadania")?.message} {...register("generalInfo.ciudadania")} placeholder="Ej. 32323" />
-                  </div>
-                  <div className="soft-card compact-card">
-                    <Field label="NOMBRE RESPONSABLE EJECUCIÓN DEL TRABAJO" error={getErrorByPath(errors, "generalInfo.trabajador")?.message} {...register("generalInfo.trabajador")} placeholder="Ej. Pepito Pérez" />
+                    <div className="mb-4">
+                      <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">
+                        RESPONSABLE DE LA EJECUCIÓN DEL TRABAJO
+                      </h3>
+                    </div>
+                    <div className="info-grid info-grid--two">
+                      <CampoSimple
+                        label="CÉDULA DE CIUDADANÍA"
+                        error={obtenerErrorPorRuta(errors, "generalInfo.ciudadania")?.message}
+                        {...register("generalInfo.ciudadania")}
+                        placeholder="Ej. 32323"
+                      />
+                      <CampoSimple
+                        label="NOMBRE DEL RESPONSABLE"
+                        error={obtenerErrorPorRuta(errors, "generalInfo.trabajador")?.message}
+                        {...register("generalInfo.trabajador")}
+                        placeholder="Ej. Pepito Pérez"
+                      />
+                    </div>
                     <div className="signature-slot">
                       <div className="mini-title">FIRMA</div>
-                      <SignatureField
+                      <CampoFirma
                         value={responsibleSignature}
-                        error={getErrorByPath(errors, "signatures.responsable")?.message}
+                        error={obtenerErrorPorRuta(errors, "signatures.responsable")?.message}
                         onChange={(value) => setValue("signatures.responsable", value, { shouldValidate: validationAttempted })}
                         onClear={() => setValue("signatures.responsable", "", { shouldValidate: validationAttempted })}
                       />
                     </div>
                   </div>
                 </div>
+
+                <GrupoSecciones title="RESPONSABLES DE LA ACTIVIDAD" description="Registra los roles de supervisión, vigía, entrante y jefe del área.">
+                  <div className="grid gap-6 xl:grid-cols-2">
+                    {valoresDefecto.approvalPeople.map((_, index) => (
+                      <TarjetaRolAprobacion
+                        key={index}
+                        index={index}
+                        control={control}
+                        errors={errors}
+                        register={register}
+                        setValue={setValue}
+                        validationAttempted={validationAttempted}
+                      />
+                    ))}
+                  </div>
+                </GrupoSecciones>
+
+                <GrupoSecciones title="OBSERVACIONES Y CIERRE" description="Registra observaciones finales y el concepto de cierre o cancelación del permiso.">
+                  <CampoArea
+                    label="OBSERVACIONES"
+                    full
+                    error={obtenerErrorPorRuta(errors, "observaciones")?.message}
+                    {...register("observaciones")}
+                    placeholder="Escribe observaciones adicionales"
+                  />
+                  <CampoArea
+                    label="CONCEPTO DEL CIERRE O CANCELACION DEL PERMISO"
+                    full
+                    error={obtenerErrorPorRuta(errors, "cierreCancelacion")?.message}
+                    {...register("cierreCancelacion")}
+                    placeholder="Escribe el concepto del cierre o cancelación"
+                  />
+                </GrupoSecciones>
               </div>
             ) : null}
           </div>
@@ -403,7 +839,7 @@ export default function Home() {
               Anterior
             </Button>
             {activeStep < sections.length ? (
-              <Button type="button" onClick={nextStep} variant="primary" disabled={activeStep === 2 && hasCurrentErrors}>
+              <Button type="button" onClick={nextStep} variant="primary" disabled={hasCurrentErrors}>
                 Siguiente
               </Button>
             ) : (

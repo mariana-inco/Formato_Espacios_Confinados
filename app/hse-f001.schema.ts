@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { definicionesMonitoreo } from "./formulario-config";
 
-// Esquema de validación para el formulario utilizando Zod
-const dateSchema = z
+const esquemaFecha = z
   .string()
   .min(1, "La fecha es obligatoria")
   .regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha debe tener formato AAAA-MM-DD")
@@ -9,19 +9,15 @@ const dateSchema = z
     message: "La fecha no es válida",
   });
 
-// Esquema de validación para la hora en formato HH:MM
-const timeSchema = z
+const esquemaHora = z
   .string()
   .min(1, "El campo es obligatorio")
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "La hora debe tener formato HH:MM");
 
-// Función para crear esquemas de texto no vacío con longitud mínima
-const nonEmptyText = (label: string, min = 3) =>
+const textoNoVacio = (label: string, min = 3) =>
   z.string().trim().min(1, `${label} es obligatorio`).min(min, `${label} debe tener al menos ${min} caracteres`);
 
-
-// Función para crear esquemas de texto numérico con longitud mínima
-const numericText = (label: string, minLength = 3) =>
+const textoNumerico = (label: string, minLength = 3) =>
   z
     .string()
     .trim()
@@ -29,42 +25,21 @@ const numericText = (label: string, minLength = 3) =>
     .regex(/^\d+$/, `${label} solo puede contener números`)
     .min(minLength, `${label} debe tener al menos ${minLength} dígitos`);
 
+const esquemaSeleccionSimple = z.enum(["Seleccione una opción", "Sí", "No"]);
+const esquemaSeleccionTriEstado = z.enum(["Seleccione una opción", "Sí", "No", "NA"]);
 
-// Esquema principal del formulario, organizando los campos en secciones lógicas
-export const formSchema = z.object({
-  generalInfo: z.object({
-    lugar: nonEmptyText("El lugar"),
-    fecha: dateSchema,
-    area: nonEmptyText("El área"),
-    responsable: nonEmptyText("El responsable"),
-    centroOperacion: nonEmptyText("El centro de operación"),
-    tiempoSolicitado: numericText("El tiempo solicitado", 1),
-    horaInicio: timeSchema,
-    horaFin: timeSchema,
-    duracion: z.string().trim().min(1, "La duración es obligatoria"),
-    descripcion: nonEmptyText("La descripción de la actividad", 10),
-    herramientas: nonEmptyText("Las herramientas", 5),
-    epp: nonEmptyText("Los EPP", 5),
-    rescate: nonEmptyText("El equipo de rescate", 5),
-    otros: z.string().trim().min(1, "El campo otros es obligatorio"),
-    personal: numericText("La cédula del personal HSE", 3),
-    personalhse: nonEmptyText("El nombre del personal HSE", 3),
-    ciudadania: numericText("La cédula de ciudadanía", 3),
-    trabajador: nonEmptyText("El nombre del responsable", 3),
+const esquemaObjetoTrabajador = z.object({
+  identificacion: textoNumerico("La identificación", 3),
+  nombre: textoNoVacio("El nombre completo", 3),
+  cargo: textoNoVacio("El cargo", 3),
+  salud: esquemaSeleccionSimple.refine((value) => value !== "Seleccione una opción", {
+    message: "Selecciona si está en buen estado de salud",
   }),
+  observacion: z.string().trim().optional(),
+});
 
-  // Esquema para la sección de trabajadores, con validación condicional basada en el estado de salud
-  workerForm: z.object({
-    identificacion: numericText("La identificación", 3),
-    nombre: nonEmptyText("El nombre completo", 3),
-    cargo: nonEmptyText("El cargo", 3),
-    salud: z
-      .enum(["Seleccione una opcion", "Sí", "No"])
-      .refine((value) => value !== "Seleccione una opcion", {
-        message: "Selecciona si está en buen estado de salud",
-      }),
-    observacion: z.string().trim().optional(),
-  }).superRefine((value, ctx) => {
+const esquemaBaseTrabajador = esquemaObjetoTrabajador
+  .superRefine((value, ctx) => {
     if (value.salud === "No" && !value.observacion?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -72,71 +47,131 @@ export const formSchema = z.object({
         message: "Debes registrar la observación del estado de salud",
       });
     }
-  }),
+  });
 
-  // Esquema para trabajadores adicionales, permitiendo un array de objetos con validación similar a la del trabajador principal
-  extraWorkers: z.array(
-    z.object({
-      id: z.number(),
-      identificacion: numericText("La identificación del trabajador adicional", 3),
-      salud: z
-        .enum(["Seleccione una opcion", "Sí", "No"])
-        .refine((value) => value !== "Seleccione una opcion", {
-          message: "Selecciona Sí o No",
-        }),
-      observacion: z.string().trim().optional(),
-      signature: z.string().trim().optional(),
-    }).superRefine((value, ctx) => {
-      if (value.salud === "No" && !value.observacion?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["observacion"],
-          message: "Debes registrar la observación del estado de salud",
-        });
-      }
-      if (value.salud !== "No" && !value.signature?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["signature"],
-          message: "La firma del trabajador adicional es obligatoria",
-        });
-      }
-    })
-  ),
-
-  // Esquema para las firmas, asegurando que todas las firmas requeridas estén presentes
-  signatures: z.object({
-    trabajador: z.string().trim().optional(),
-    hse: z.string().trim().min(1, "La firma del personal HSE es obligatoria"),
-    responsable: z.string().trim().min(1, "La firma del responsable es obligatoria"),
-  }),
-  declarationAccepted: z.boolean().refine((value) => value, {
-    message: "Debes aceptar la declaración de responsabilidad",
-  }),
-}).superRefine((value, ctx) => {
-  if (value.workerForm.salud !== "No" && !value.signatures.trabajador?.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["signatures", "trabajador"],
-      message: "La firma del trabajador es obligatoria",
-    });
-  }
+const esquemaPersonaAprobacion = z.object({
+  role: z.string().trim().min(1, "El rol es obligatorio"),
+  nombre: textoNoVacio("El nombre", 3),
+  identificacion: textoNumerico("La identificación", 3),
+  signature: z.string().trim().min(1, "La firma es obligatoria"),
 });
 
-export type SaludValue = z.infer<typeof formSchema.shape.workerForm.shape.salud>;
-export type WorkerFormValues = {
+const esquemaTomaMonitoreo = z.object({
+  fecha: esquemaFecha,
+  hora: esquemaHora,
+  resultado: z.string().trim().min(1, "El resultado es obligatorio"),
+  signature: z.string().trim().min(1, "La firma es obligatoria"),
+});
+
+const esquemaFilaMonitoreo = z.object({
+  takes: z.tuple([esquemaTomaMonitoreo, esquemaTomaMonitoreo]),
+});
+
+export const esquemaFormulario = z
+  .object({
+    generalInfo: z.object({
+      lugar: textoNoVacio("El lugar"),
+      fecha: esquemaFecha,
+      area: textoNoVacio("El área"),
+      responsable: textoNoVacio("El responsable", 3),
+      centroOperacion: textoNoVacio("El centro de operación", 3),
+      tiempoSolicitado: textoNumerico("El tiempo solicitado", 1),
+      horaInicio: esquemaHora,
+      horaFin: esquemaHora,
+      duracion: z.string().trim().min(1, "La duración es obligatoria"),
+      descripcion: textoNoVacio("La descripción de la actividad", 10),
+      herramientas: textoNoVacio("Las herramientas", 5),
+      epp: textoNoVacio("Los EPP", 5),
+      rescate: textoNoVacio("El equipo de rescate", 5),
+      otros: z.string().trim().min(1, "El campo otros es obligatorio"),
+      personal: textoNumerico("La cédula del personal HSE", 3),
+      personalhse: textoNoVacio("El nombre del personal HSE", 3),
+      ciudadania: textoNumerico("La cédula de ciudadanía", 3),
+      trabajador: textoNoVacio("El nombre del responsable", 3),
+    }),
+    workerForm: esquemaBaseTrabajador,
+    extraWorkers: z.array(
+      esquemaObjetoTrabajador.extend({
+        id: z.number(),
+        signature: z.string().trim().optional(),
+      }).superRefine((value, ctx) => {
+        if (value.salud !== "No" && !value.signature?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["signature"],
+            message: "La firma del trabajador adicional es obligatoria",
+          });
+        }
+      })
+    ),
+    safetyChecks: z.record(z.string(), esquemaSeleccionTriEstado),
+    monitoring: z.object({
+      rows: z
+        .array(esquemaFilaMonitoreo)
+        .length(definicionesMonitoreo.length, "Debes completar las dos tomas de monitoreo"),
+      equipoMedicion: textoNoVacio("El equipo de medición a utilizar", 3),
+    }),
+    approvalPeople: z.array(esquemaPersonaAprobacion).length(4, "Debes registrar los cuatro roles de autorización"),
+    signatures: z.object({
+      trabajador: z.string().trim().optional(),
+      hse: z.string().trim().min(1, "La firma del personal HSE es obligatoria"),
+      responsable: z.string().trim().min(1, "La firma del responsable es obligatoria"),
+    }),
+    observaciones: z.string().trim().optional(),
+    cierreCancelacion: z.string().trim().optional(),
+    declarationAccepted: z.boolean().refine((value) => value, {
+      message: "Debes aceptar la declaración de responsabilidad",
+    }),
+  })
+  .superRefine((value, ctx) => {
+    if (value.workerForm.salud !== "No" && !value.signatures.trabajador?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["signatures", "trabajador"],
+        message: "La firma del trabajador es obligatoria",
+      });
+    }
+
+    // Validación para safetyChecks: todos los campos deben estar seleccionados
+    for (const [key, val] of Object.entries(value.safetyChecks)) {
+      if (val === "Seleccione una opción") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["safetyChecks", key],
+          message: "Debes seleccionar una opción para todas las medidas de seguridad",
+        });
+      }
+    }
+  });
+
+export type ValorSalud = z.infer<typeof esquemaSeleccionSimple>;
+export type ValorTriEstado = z.infer<typeof esquemaSeleccionTriEstado>;
+export type ValoresFormularioTrabajador = {
   identificacion: string;
   nombre: string;
   cargo: string;
-  salud: SaludValue;
+  salud: ValorSalud;
   observacion?: string;
 };
 
-export type ExtraWorkerValues = {
+export type ValoresTrabajadorExtra = {
   id: number;
   identificacion: string;
-  salud: SaludValue;
+  nombre: string;
+  cargo: string;
+  salud: ValorSalud;
   observacion?: string;
   signature: string;
 };
-export type HseF001Payload = z.infer<typeof formSchema>;
+
+export type ValoresPersonaAprobacion = {
+  role: string;
+  nombre: string;
+  identificacion: string;
+  signature: string;
+};
+
+export type ValoresTomaMonitoreo = z.infer<typeof esquemaTomaMonitoreo>;
+export type ValoresFilaMonitoreo = z.infer<typeof esquemaFilaMonitoreo>;
+
+export type CargaFormularioHseF001 = z.infer<typeof esquemaFormulario>;

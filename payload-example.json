@@ -4,18 +4,18 @@
     "fecha": "2026-03-31",
     "area": "Operaciones",
     "responsable": "Juan Perez",
-    "centroOperacion": "Ammann",
-    "tiempoSolicitado": "96",
+    "centroOperacion": "Planta principal",
+    "tiempoSolicitado": "8",
     "horaInicio": "08:00",
-    "horaFin": "12:00",
-    "duracion": "4 horas",
+    "horaFin": "16:00",
+    "duracion": "8 horas",
     "descripcion": "Mantenimiento de tolvas y silos",
     "herramientas": "Herramientas manuales y eléctricas",
     "epp": "Casco, guantes, gafas y botas",
     "rescate": "Trípode, línea de vida y arnés",
     "otros": "Ninguno",
     "personal": "123456789",
-    "personalhse": "Maria Gomez",
+    "personalhse": "Mariana Gomez",
     "ciudadania": "987654321",
     "trabajador": "Carlos Rodriguez"
   },
@@ -24,14 +24,227 @@
     "nombre": "Juan David Beltran Rodriguez",
     "cargo": "Operador planta de asfalto I",
     "salud": "Sí",
-    "dificultad": ""
+    "observacion": ""
   },
   "extraWorkers": [
     {
       "id": 2,
       "identificacion": "100200300",
+      "nombre": "Maria Fernanda Lopez",
+      "cargo": "Auxiliar",
       "salud": "Sí",
-      "dificultad": "",
+      "observacion": "",
+      "signature": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+    }
+  ],
+  "safetyChecks": {
+    "permisoPrevio": "SI",
+    "procedimientoSocializado": "SI",
+    "senalizacionArea": "SI",
+    "instruccionActualizada": "SI",
+    "verificacionRedes": "SI",
+    "estadoSaludTrabajadores": "SI",
+    "brigadaEmergencias": "SI",
+    "eppAdecuados": "SI",
+    "seguridadSocial": "SI",
+    "conceptoMedico": "SI",
+    "formacionEspecifica": "SI",
+    "guantesCaucho": "SI",
+    "revisionCondiciones": "SI",
+    "escalerasAdecuadas": "SI",
+    "demarcacionArea": "SI",
+    "planEmergencias": "SI",
+    "areaLibrePersonal": "SI",
+    "ventilacionPrevia": "SI",
+    "inspeccionEquipos": "SI",
+    "botiquinExtintorCamilla": "SI",
+    "salidasEvacuacion": "SI",
+    "vigiaExclusivo": "SI"
+  },
+  "monitoring": {
+    "rows": [
+      {
+        "gas": "OXIGENO",
+        "condiciones": "19.5 a 23.5 %",
+        "takes": [
+          {
+            "fecha": "2026-03-31",
+            "hora": "07:30",
+            "resultado": "20.9",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-1-1",
+              "puntos": 1200
+            }
+          },
+          {
+            "fecha": "2026-03-31",
+            "hora": "10:30",
+            "resultado": "21.0",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-1-2",
+              "puntos": 1180
+            }
+          }
+        ]
+      },
+      {
+        "gas": "CO",
+        "condiciones": "< 25 PPM",
+        "takes": [
+          {
+            "fecha": "2026-03-31",
+            "hora": "07:30",
+            "resultado": "4",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-2-1",
+              "puntos": 1160
+            }
+          },
+          {
+            "fecha": "2026-03-31",
+            "hora": "10:30",
+            "resultado": "3",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-2-2",
+              "puntos": 1120
+            }
+          }
+        ]
+      },
+      {
+        "gas": "SO2",
+        "condiciones": "< 2 PPM",
+        "takes": [
+          {
+            "fecha": "2026-03-31",
+            "hora": "07:30",
+            "resultado": "0",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-3-1",
+              "puntos": 1105
+            }
+          },
+          {
+            "fecha": "2026-03-31",
+            "hora": "10:30",
+            "resultado": "0",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-3-2",
+              "puntos": 1090
+            }
+          }
+        ]
+      },
+      {
+        "gas": "H2S",
+        "condiciones": "< 10 PPM",
+        "takes": [
+          {
+            "fecha": "2026-03-31",
+            "hora": "07:30",
+            "resultado": "0",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-4-1",
+              "puntos": 1110
+            }
+          },
+          {
+            "fecha": "2026-03-31",
+            "hora": "10:30",
+            "resultado": "0",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-4-2",
+              "puntos": 1100
+            }
+          }
+        ]
+      },
+      {
+        "gas": "INFLAMABILIDAD",
+        "condiciones": "< 5 % del LII",
+        "takes": [
+          {
+            "fecha": "2026-03-31",
+            "hora": "07:30",
+            "resultado": "0",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-5-1",
+              "puntos": 1130
+            }
+          },
+          {
+            "fecha": "2026-03-31",
+            "hora": "10:30",
+            "resultado": "0",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-5-2",
+              "puntos": 1095
+            }
+          }
+        ]
+      },
+      {
+        "gas": "TEMPERATURA",
+        "condiciones": "17 y 23 oC WGBT",
+        "takes": [
+          {
+            "fecha": "2026-03-31",
+            "hora": "07:30",
+            "resultado": "21",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-6-1",
+              "puntos": 1140
+            }
+          },
+          {
+            "fecha": "2026-03-31",
+            "hora": "10:30",
+            "resultado": "22",
+            "signature": {
+              "registrado": true,
+              "enlace": "firma://monitoring-6-2",
+              "puntos": 1108
+            }
+          }
+        ]
+      }
+    ],
+    "equipoMedicion": "Detector multigás"
+  },
+  "approvalPeople": [
+    {
+      "role": "Supervisor espacios confinados",
+      "nombre": "Pedro Gomez",
+      "identificacion": "123456789",
+      "signature": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+    },
+    {
+      "role": "Vigia responsable de la actividad",
+      "nombre": "Laura Perez",
+      "identificacion": "234567890",
+      "signature": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+    },
+    {
+      "role": "Trabajador entrante espacio confinado",
+      "nombre": "Carlos Rodriguez",
+      "identificacion": "345678901",
+      "signature": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+    },
+    {
+      "role": "Jefe del área / Líder de proceso",
+      "nombre": "Ana Torres",
+      "identificacion": "456789012",
       "signature": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
     }
   ],
@@ -40,5 +253,7 @@
     "hse": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
     "responsable": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
   },
+  "observaciones": "Ninguna",
+  "cierreCancelacion": "El permiso se cierra al finalizar el trabajo y verificar el área segura.",
   "declarationAccepted": true
 }

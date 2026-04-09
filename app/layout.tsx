@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Formato F001 - Espacios Confinados",
+  title: "HSE F001-Espacios Confinados",
   description: "Formato para la gestión de espacios confinados en el trabajo",
 };
 

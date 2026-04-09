@@ -1,20 +1,41 @@
 import { z } from "zod";
-import { formSchema, type SaludValue } from "./hse-f001.schema";
+import { esquemaFormulario, type ValoresFilaMonitoreo, type ValoresTomaMonitoreo, type ValorSalud, type ValorTriEstado } from "./hse-f001.schema";
+import { rolesAprobacion, definicionesMonitoreo, gruposMedidasSeguridad } from "./formulario-config";
 
-export type FormValues = z.input<typeof formSchema>;
-export type StepNumber = 1 | 2 | 3 | 4;
+export type ValoresFormulario = z.input<typeof esquemaFormulario>;
 
 export const sections = [
-  { step: 1, title: "Información general del Trabajo" },
-  { step: 2, title: "Personal Autorizado y Responsables" },
-  { step: 3, title: "Condiciones de seguridad y verificación" },
-  { step: 4, title: "Autorización y declaración de responsabilidad" },
+  { step: 1, title: "Datos generales" },
+  { step: 2, title: "Trabajadores responsables" },
+  { step: 3, title: "Medidas de seguridad" },
+  { step: 4, title: "Procedimiento seguro y monitoreo ambiental" },
+  { step: 5, title: "EPP, rescate y herramientas" },
+  { step: 6, title: "Responsabilidades y autorizaciones" },
 ] as const;
 
-export const defaultValues: FormValues = {
+export type NumeroPaso = (typeof sections)[number]["step"];
+
+const valorHoy = new Date().toISOString().slice(0, 10);
+
+function crearDefectosTomaMonitoreo(): ValoresTomaMonitoreo {
+  return {
+    fecha: valorHoy,
+    hora: "",
+    resultado: "",
+    signature: "",
+  };
+}
+
+export function crearDefectosFilasMonitoreo(): ValoresFormulario["monitoring"]["rows"] {
+  return definicionesMonitoreo.map(() => ({
+    takes: [crearDefectosTomaMonitoreo(), crearDefectosTomaMonitoreo()] as ValoresFilaMonitoreo["takes"],
+  }));
+}
+
+export const valoresDefecto: ValoresFormulario = {
   generalInfo: {
     lugar: "",
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: valorHoy,
     area: "",
     responsable: "",
     centroOperacion: "",
@@ -26,7 +47,7 @@ export const defaultValues: FormValues = {
     herramientas: "",
     epp: "",
     rescate: "",
-    otros: "",
+    otros: "Ninguno",
     personal: "",
     personalhse: "",
     ciudadania: "",
@@ -36,44 +57,122 @@ export const defaultValues: FormValues = {
     identificacion: "",
     nombre: "",
     cargo: "",
-    salud: "Seleccione una opcion" as SaludValue,
+    salud: "Seleccione una opción" as ValorSalud,
     observacion: "",
   },
   extraWorkers: [],
+  safetyChecks: Object.fromEntries(
+    gruposMedidasSeguridad.flatMap((group) => group.items.map((item) => [item.key, "Seleccione una opción" as ValorTriEstado]))
+  ) as ValoresFormulario["safetyChecks"],
+  monitoring: {
+    rows: crearDefectosFilasMonitoreo(),
+    equipoMedicion: "",
+  },
+  approvalPeople: rolesAprobacion.map((role) => ({
+    role,
+    nombre: "",
+    identificacion: "",
+    signature: "",
+  })) as ValoresFormulario["approvalPeople"],
   signatures: {
     trabajador: "",
     hse: "",
     responsable: "",
   },
+  observaciones: "",
+  cierreCancelacion: "",
   declarationAccepted: false,
 };
 
-export const stepFields: Record<StepNumber, string[]> = {
-  1: [
-    "generalInfo.lugar",
-    "generalInfo.fecha",
-    "generalInfo.area",
-    "generalInfo.responsable",
-    "generalInfo.centroOperacion",
-    "generalInfo.tiempoSolicitado",
-    "generalInfo.horaInicio",
-    "generalInfo.horaFin",
-    "generalInfo.duracion",
-    "generalInfo.descripcion",
-    "generalInfo.herramientas",
-  ],
-  2: ["workerForm.identificacion", "workerForm.nombre", "workerForm.cargo", "workerForm.salud", "workerForm.observacion", "signatures.trabajador"],
-  3: ["generalInfo.epp", "generalInfo.rescate", "generalInfo.otros"],
-  4: [
-    "generalInfo.personal",
-    "generalInfo.personalhse",
-    "generalInfo.ciudadania",
-    "generalInfo.trabajador",
-    "signatures.hse",
-    "signatures.responsable",
-    "declarationAccepted",
-  ],
-};
+export function obtenerCamposPorPaso(step: NumeroPaso, values: ValoresFormulario): string[] {
+  if (step === 1) {
+    return [
+      "generalInfo.lugar",
+      "generalInfo.fecha",
+      "generalInfo.area",
+      "generalInfo.responsable",
+      "generalInfo.centroOperacion",
+      "generalInfo.tiempoSolicitado",
+      "generalInfo.horaInicio",
+      "generalInfo.horaFin",
+      "generalInfo.duracion",
+      "generalInfo.descripcion",
+      "generalInfo.herramientas",
+    ];
+  }
+
+  if (step === 2) {
+    const extraWorkerPaths = values.extraWorkers.flatMap((_, index) => [
+      `extraWorkers.${index}.identificacion`,
+      `extraWorkers.${index}.nombre`,
+      `extraWorkers.${index}.cargo`,
+      `extraWorkers.${index}.salud`,
+      `extraWorkers.${index}.observacion`,
+      `extraWorkers.${index}.signature`,
+    ]);
+
+    return [
+      "workerForm.identificacion",
+      "workerForm.nombre",
+      "workerForm.cargo",
+      "workerForm.salud",
+      "workerForm.observacion",
+      "signatures.trabajador",
+      ...extraWorkerPaths,
+    ];
+  }
+
+  if (step === 4) {
+    const rowFields = definicionesMonitoreo.flatMap((_, rowIndex) =>
+      [0, 1].flatMap((takeIndex) => [
+        `monitoring.rows.${rowIndex}.takes.${takeIndex}.fecha`,
+        `monitoring.rows.${rowIndex}.takes.${takeIndex}.hora`,
+        `monitoring.rows.${rowIndex}.takes.${takeIndex}.resultado`,
+        `monitoring.rows.${rowIndex}.takes.${takeIndex}.signature`,
+      ])
+    );
+
+    return [...rowFields, "monitoring.equipoMedicion"];
+  }
+
+  if (step === 5) {
+    return ["generalInfo.epp", "generalInfo.rescate"];
+  }
+
+  if (step === 6) {
+    return [
+      "generalInfo.personal",
+      "generalInfo.personalhse",
+      "generalInfo.ciudadania",
+      "generalInfo.trabajador",
+      "signatures.hse",
+      "signatures.responsable",
+      "declarationAccepted",
+      ...values.approvalPeople.flatMap((_, index) => [
+        `approvalPeople.${index}.nombre`,
+        `approvalPeople.${index}.identificacion`,
+        `approvalPeople.${index}.signature`,
+      ]),
+    ];
+  }
+
+  return [];
+}
+
+export function crearDefectosVerificacionSeguridad() {
+  return Object.fromEntries(
+    gruposMedidasSeguridad.flatMap((group) => group.items.map((item) => [item.key, "Seleccione una opción" as ValorTriEstado]))
+  );
+}
+
+export function crearDefectosPersonasAprobacion() {
+  return rolesAprobacion.map((role) => ({
+    role,
+    nombre: "",
+    identificacion: "",
+    signature: "",
+  }));
+}
 
 export function calcularDuracion(inicio: string, fin: string) {
   if (!inicio || !fin) return "";
@@ -87,7 +186,7 @@ export function calcularDuracion(inicio: string, fin: string) {
   return `${valorFormateado} horas`;
 }
 
-export function compactObject<T extends Record<string, unknown>>(value: T) {
+export function compactarObjeto<T extends Record<string, unknown>>(value: T) {
   return Object.fromEntries(
     Object.entries(value).filter(([, current]) => {
       if (current === "" || current === null || current === undefined) return false;
@@ -97,10 +196,19 @@ export function compactObject<T extends Record<string, unknown>>(value: T) {
   ) as Partial<T>;
 }
 
-export function summarizeSignatureLink(label: string, signature: string) {
+export function compactarObjetoSeleccion<T extends Record<string, string>>(value: T) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, current]) => current !== "" && current !== "Seleccione una opción")
+  ) as Partial<T>;
+}
+
+export function resumirEnlaceFirma(label: string, signature?: string) {
+  const normalizedSignature = signature ?? "";
   return {
-    registrado: Boolean(signature),
-    enlace: signature ? `firma://${label}` : "",
-    puntos: signature ? signature.length : 0,
+    registrado: Boolean(normalizedSignature),
+    enlace: normalizedSignature ? `firma://${label}` : "",
+    puntos: normalizedSignature ? normalizedSignature.length : 0,
   };
 }
+
+export { rolesAprobacion, definicionesMonitoreo, gruposMedidasSeguridad };
