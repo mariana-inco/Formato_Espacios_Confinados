@@ -15,7 +15,7 @@ export function Checkbox({ checked = false, onCheckedChange, className = "", ...
       checked={checked}
       aria-checked={checked}
       className={[
-        "h-5 w-5 shrink-0 rounded-[6px] border border-slate-300 bg-white shadow-sm accent-sky-600",
+        "h-5 w-5 shrink-0 rounded-md border border-slate-300 bg-white shadow-sm accent-sky-600",
         "focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2",
         className,
       ].join(" ")}

@@ -715,19 +715,7 @@ export default function Home() {
                         <span>Acepto y entiendo la declaración de responsabilidad</span>
                       </label>
                       <div className="declaration-card__closure-grid" aria-label="Cierre de declaración">
-                        <div className="declaration-card__closure-item">
-                          <p className="declaration-card__closure-text">
-                            <span className="declaration-card__closure-strong">Yo,</span>
-                            <span className="declaration-card__blank-line" aria-hidden="true" />
-                            he revisado el área y certifico que se han tomado las precauciones indicadas para dar inicio al trabajo.
-                          </p>
-                        </div>
-                        <div className="declaration-card__closure-item declaration-card__closure-item--right">
-                          <p className="declaration-card__closure-text declaration-card__closure-text--center">
-                            Acataremos las normas, procedimientos y recomendaciones mencionados por el personal HSE, para el seguro desarrollo de la labor.
-                          </p>
-                          <p className="declaration-card__closure-label">Nombre, Firma y C.C. del responsable de la ejecución del trabajo</p>
-                        </div>
+                       
                       </div>
                       {validationAttempted && errors.declarationAccepted ? <p className="field-helper field-helper--error">{errors.declarationAccepted.message}</p> : null}
                     </div>

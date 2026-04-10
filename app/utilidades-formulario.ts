@@ -122,17 +122,13 @@ export function obtenerCamposPorPaso(step: NumeroPaso, values: ValoresFormulario
     ];
   }
 
-  if (step === 4) {
-    const rowFields = definicionesMonitoreo.flatMap((_, rowIndex) =>
-      [0, 1].flatMap((takeIndex) => [
-        `monitoring.rows.${rowIndex}.takes.${takeIndex}.fecha`,
-        `monitoring.rows.${rowIndex}.takes.${takeIndex}.hora`,
-        `monitoring.rows.${rowIndex}.takes.${takeIndex}.resultado`,
-        `monitoring.rows.${rowIndex}.takes.${takeIndex}.signature`,
-      ])
-    );
+  if (step === 3) {
+    return Object.keys(values.safetyChecks).map((field) => `safetyChecks.${field}`);
+  }
 
-    return [...rowFields, "monitoring.equipoMedicion"];
+  if (step === 4) {
+    // La sección 4 es totalmente opcional: no bloquea la navegación si el usuario no completa ningún campo.
+    return [];
   }
 
   if (step === 5) {

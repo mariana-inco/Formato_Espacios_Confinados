@@ -57,10 +57,10 @@ const esquemaPersonaAprobacion = z.object({
 });
 
 const esquemaTomaMonitoreo = z.object({
-  fecha: esquemaFecha,
-  hora: esquemaHora,
-  resultado: z.string().trim().min(1, "El resultado es obligatorio"),
-  signature: z.string().trim().min(1, "La firma es obligatoria"),
+  fecha: z.string().optional(),
+  hora: z.string().optional(),
+  resultado: z.string().optional(),
+  signature: z.string().optional(),
 });
 
 const esquemaFilaMonitoreo = z.object({
@@ -106,10 +106,8 @@ export const esquemaFormulario = z
     ),
     safetyChecks: z.record(z.string(), esquemaSeleccionTriEstado),
     monitoring: z.object({
-      rows: z
-        .array(esquemaFilaMonitoreo)
-        .length(definicionesMonitoreo.length, "Debes completar las dos tomas de monitoreo"),
-      equipoMedicion: textoNoVacio("El equipo de medición a utilizar", 3),
+      rows: z.array(esquemaFilaMonitoreo),
+      equipoMedicion: z.string().optional(),
     }),
     approvalPeople: z.array(esquemaPersonaAprobacion).length(4, "Debes registrar los cuatro roles de autorización"),
     signatures: z.object({
