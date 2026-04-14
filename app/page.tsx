@@ -8,12 +8,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { useFieldArray, useForm, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
+import { useFieldArray, useForm, useWatch, type UseFormRegister } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { esquemaFormulario, type ValorSalud } from "./hse-f001.schema";
 import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
-import { Input } from "../components/ui/input";
 import {
   compactarObjeto,
   compactarObjetoSeleccion,
@@ -28,11 +27,8 @@ import {
   type NumeroPaso,
 } from "./utilidades-formulario";
 import { TarjetaRolAprobacion, TarjetaTrabajadorExtra, CampoSimple, GrupoSecciones, CampoSeleccion, CampoFirma, CampoArea, obtenerErrorPorRuta } from "./componentes-formulario";
+import { SeccionMonitoreoAmbiental } from "./seccion-monitoreo-ambiental";
 
-/**
- * Componente para una fila de medida de seguridad
- * Renderiza opciones de radio para NA, SI, NO para cada medida de control
- */
 function SafetyMeasureRow({
   name,
   label,
@@ -42,134 +38,25 @@ function SafetyMeasureRow({
   label: string;
   register: UseFormRegister<ValoresFormulario>;
 }) {
-  const options = ["NA", "SI", "NO"] as const;
+  const opciones = [
+    { value: "NA", label: "NA" },
+    { value: "SI", label: "SI" },
+    { value: "NO", label: "NO" },
+  ] as const;
 
   return (
     <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 md:grid-cols-[minmax(0,1.45fr)_repeat(3,minmax(72px,auto))] md:items-center">
       <div className="text-sm font-medium leading-6 text-slate-700">{label}</div>
-      {options.map((option) => (
+      {opciones.map((opcion) => (
         <label
-          key={option}
+          key={opcion.value}
           className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-sky-300 hover:bg-sky-50"
         >
-          <input type="radio" value={option} {...register(name as never)} className="h-4 w-4 accent-sky-600" />
-          <span>{option}</span>
+          <input type="radio" value={opcion.value} {...register(name as never)} className="h-4 w-4 accent-sky-600" />
+          <span>{opcion.label}</span>
         </label>
       ))}
     </div>
-  );
-}
-
-function MonitoringCell({
-  children,
-  error,
-}: {
-  children: React.ReactNode;
-  error?: string;
-}) {
-  return (
-    <div className="monitoring-table__cell">
-      {children}
-      {error ? <p className="field-helper field-helper--error monitoring-table__cell-error">{error}</p> : null}
-    </div>
-  );
-}
-
-function MonitoringSignatureCell({
-  path,
-  control,
-  errors,
-  setValue,
-  validationAttempted,
-}: {
-  path: string;
-  control: Control<ValoresFormulario>;
-  errors: FieldErrors<ValoresFormulario>;
-  setValue: UseFormSetValue<ValoresFormulario>;
-  validationAttempted: boolean;
-}) {
-  const signatureValue = (useWatch({ control, name: path as never }) ?? "") as string;
-
-  return (
-    <div className="monitoring-table__cell monitoring-table__cell--signature">
-      <CampoFirma
-        compact
-        clearLabel="Limpiar"
-        value={signatureValue}
-        error={obtenerErrorPorRuta(errors, path)?.message}
-        onChange={(value) => setValue(path as never, value as never, { shouldValidate: validationAttempted })}
-        onClear={() => setValue(path as never, "" as never, { shouldValidate: validationAttempted })}
-      />
-    </div>
-  );
-}
-
-/**
- * Componente para una fila de la tabla de monitoreo
- * Maneja la entrada de datos para cada definición de monitoreo (gas, condiciones, etc.)
- */
-function MonitoringTableRow({
-  definition,
-  rowIndex,
-  register,
-  control,
-  errors,
-  setValue,
-  validationAttempted,
-}: {
-  definition: (typeof definicionesMonitoreo)[number];
-  rowIndex: number;
-  register: UseFormRegister<ValoresFormulario>;
-  control: Control<ValoresFormulario>;
-  errors: FieldErrors<ValoresFormulario>;
-  setValue: UseFormSetValue<ValoresFormulario>;
-  validationAttempted: boolean;
-}) {
-  const takeIndexes = [0, 1] as const;
-
-  return (
-    <tr className="monitoring-table__row">
-      <th scope="row" className="monitoring-table__row-label">
-        {definition.label}
-      </th>
-      <td className="monitoring-table__condition">{definition.helper}</td>
-      {takeIndexes.map((takeIndex) => {
-        const base = `monitoring.rows.${rowIndex}.takes.${takeIndex}` as const;
-        const datePath = `${base}.fecha`;
-        const timePath = `${base}.hora`;
-        const resultPath = `${base}.resultado`;
-        const signaturePath = `${base}.signature`;
-
-        return (
-          <React.Fragment key={`${definition.key}-${takeIndex}`}>
-            <td>
-              <MonitoringCell error={obtenerErrorPorRuta(errors, datePath)?.message}>
-                <Input type="date" {...register(datePath as never)} className="monitoring-table__input monitoring-table__input--date" aria-invalid={Boolean(obtenerErrorPorRuta(errors, datePath)?.message)} />
-              </MonitoringCell>
-            </td>
-            <td>
-              <MonitoringCell error={obtenerErrorPorRuta(errors, timePath)?.message}>
-                <Input type="time" {...register(timePath as never)} className="monitoring-table__input monitoring-table__input--time" aria-invalid={Boolean(obtenerErrorPorRuta(errors, timePath)?.message)} />
-              </MonitoringCell>
-            </td>
-            <td>
-              <MonitoringCell error={obtenerErrorPorRuta(errors, resultPath)?.message}>
-                <Input type="text" inputMode="decimal" placeholder="Ej. 21.0" {...register(resultPath as never)} className="monitoring-table__input monitoring-table__input--result" aria-invalid={Boolean(obtenerErrorPorRuta(errors, resultPath)?.message)} />
-              </MonitoringCell>
-            </td>
-            <td>
-              <MonitoringSignatureCell
-                path={signaturePath}
-                control={control}
-                errors={errors}
-                setValue={setValue}
-                validationAttempted={validationAttempted}
-              />
-            </td>
-          </React.Fragment>
-        );
-      })}
-    </tr>
   );
 }
 
@@ -557,83 +444,13 @@ export default function Home() {
             ) : null}
 
             {activeStep === 4 ? (
-              <div className="space-y-8">
-                <div className="permit-warning-card" role="note" aria-label="Advertencia del permiso">
-                  <div className="permit-warning-card__head">
-                    Este permiso NO debe otorgarse si alguna de las anteriores condiciones no se está cumpliendo
-                  </div>
-                  <div className="permit-warning-card__note">
-                    <span>Nota:</span> En caso de tormentas, lloviznas suaves y/o vientos, se deben suspender los trabajos.
-                  </div>
-                </div>
-
-                <div className="pst-heading">PROCEDIMIENTO SEGURO DE TRABAJO (PST)</div>
-
-                <GrupoSecciones
-                  title="RESULTADOS MONITOREO AMBIENTAL Y VALIDACIONES (Funcionario de Higiene y Seguridad y Salud en el Trabajo)"
-                  description="Registra las dos tomas dentro de la misma tabla, con fecha, hora, resultado y firma digital en cada bloque."
-                >
-                  <div className="monitoring-table-shell">
-                    <div className="monitoring-table-scroll">
-                      <table className="monitoring-table">
-                        <colgroup>
-                          <col className="monitoring-table__col monitoring-table__col--gas" />
-                          <col className="monitoring-table__col monitoring-table__col--condition" />
-                          <col className="monitoring-table__col monitoring-table__col--date" />
-                          <col className="monitoring-table__col monitoring-table__col--time" />
-                          <col className="monitoring-table__col monitoring-table__col--result" />
-                          <col className="monitoring-table__col monitoring-table__col--signature" />
-                          <col className="monitoring-table__col monitoring-table__col--date" />
-                          <col className="monitoring-table__col monitoring-table__col--time" />
-                          <col className="monitoring-table__col monitoring-table__col--result" />
-                          <col className="monitoring-table__col monitoring-table__col--signature" />
-                        </colgroup>
-                        <thead>
-                          <tr>
-                            <th scope="col">Gases y temperatura</th>
-                            <th scope="col">Condiciones aceptables</th>
-                            <th scope="col">FECHA</th>
-                            <th scope="col">HORA</th>
-                            <th scope="col">RESULTADO</th>
-                            <th scope="col">FIRMA</th>
-                            <th scope="col">FECHA</th>
-                            <th scope="col">HORA</th>
-                            <th scope="col">RESULTADO</th>
-                            <th scope="col">FIRMA</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {definicionesMonitoreo.map((definition, rowIndex) => (
-                            <MonitoringTableRow
-                              key={definition.key}
-                              definition={definition}
-                              rowIndex={rowIndex}
-                              register={register}
-                              control={control}
-                              errors={errors}
-                              setValue={setValue}
-                              validationAttempted={validationAttempted}
-                            />
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <p className="monitoring-table__note">
-                      P.P.M = Partículas por millón. LII = limite de inflamabilidad inferior. WGBT = Temperatura de globo; bulbo húmedo y bulbo seco.
-                    </p>
-                  </div>
-
-                  <div className="pt-4">
-                    <CampoSimple
-                      label="EQUIPO DE MEDICIÓN A UTILIZAR"
-                      error={obtenerErrorPorRuta(errors, "monitoring.equipoMedicion")?.message}
-                      {...register("monitoring.equipoMedicion")}
-                      placeholder="Ej. Detector multigás"
-                    />
-                  </div>
-                </GrupoSecciones>
-              </div>
+              <SeccionMonitoreoAmbiental
+                control={control}
+                register={register}
+                errors={errors}
+                setValue={setValue}
+                validationAttempted={validationAttempted}
+              />
             ) : null}
 
             {activeStep === 5 ? (

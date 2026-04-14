@@ -11,6 +11,20 @@ import { Select } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
 import { type ValoresFormulario } from "./utilidades-formulario";
 
+type TrazosFirma = Record<string, number[][]>;
+
+const cacheTrazosFirma = new Map<string, TrazosFirma>();
+
+function obtenerTrazosFirmaGuardados(firma: string): TrazosFirma {
+  if (!firma) return {};
+  return cacheTrazosFirma.get(firma) ?? {};
+}
+
+function guardarTrazosFirma(firma: string, trazos: TrazosFirma) {
+  if (!firma) return;
+  cacheTrazosFirma.set(firma, trazos);
+}
+
 export function CampoSimple({
   label,
   error,
@@ -119,59 +133,67 @@ export function CampoFirma({
   compact?: boolean;
   clearLabel?: string;
 }) {
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const signatureRef = useRef<SignatureCanvasRef | null>(null);
-  const [points, setPoints] = useState<Record<string, number[][]>>({});
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const contenedorRef = useRef<HTMLDivElement | null>(null);
+  const lienzoRef = useRef<SignatureCanvasRef | null>(null);
+  const trazosIniciales = obtenerTrazosFirmaGuardados(value);
+  const [trazosFirma, setTrazosFirma] = useState<TrazosFirma>(() => trazosIniciales);
+  const trazosFirmaRef = useRef<TrazosFirma>(trazosIniciales);
+  const [tamanoLienzo, setTamanoLienzo] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    const updateSize = () => {
-      const width = Math.round(wrapperRef.current?.clientWidth ?? 0);
+    trazosFirmaRef.current = trazosFirma;
+  }, [trazosFirma]);
+
+  useEffect(() => {
+    const actualizarTamano = () => {
+      const width = Math.round(contenedorRef.current?.clientWidth ?? 0);
       if (!width) return;
-      setCanvasSize({ width, height: compact ? 110 : 180 });
+      setTamanoLienzo({ width, height: compact ? 110 : 180 });
     };
-    updateSize();
-    const observer = new ResizeObserver(updateSize);
-    if (wrapperRef.current) observer.observe(wrapperRef.current);
-    return () => observer.disconnect();
+    actualizarTamano();
+    const observador = new ResizeObserver(actualizarTamano);
+    if (contenedorRef.current) observador.observe(contenedorRef.current);
+    return () => observador.disconnect();
   }, [compact]);
 
-  const handlePointer = (strokePoints: number[][]) => {
-    if (strokePoints.length === 0) return;
-    const pathKey = `path-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    setPoints((prev) => ({ ...prev, [pathKey]: strokePoints }));
+  const manejarTrazado = (trazo: number[][]) => {
+    if (trazo.length === 0) return;
+    const claveTrazo = `path-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const siguientesTrazos = { ...trazosFirmaRef.current, [claveTrazo]: trazo };
+    trazosFirmaRef.current = siguientesTrazos;
+    setTrazosFirma(siguientesTrazos);
     window.setTimeout(() => {
-      const nextValue = signatureRef.current?.canvas?.toDataURL("image/png") ?? "";
-      if (nextValue) onChange(nextValue);
+      const firmaActual = lienzoRef.current?.canvas?.toDataURL("image/png") ?? "";
+      if (!firmaActual) return;
+      guardarTrazosFirma(firmaActual, siguientesTrazos);
+      onChange(firmaActual);
     }, 0);
   };
 
-  const clearSignature = () => {
-    signatureRef.current?.clear();
-    setPoints({});
+  const limpiarFirma = () => {
+    lienzoRef.current?.clear();
+    const trazosVacios: TrazosFirma = {};
+    trazosFirmaRef.current = trazosVacios;
+    setTrazosFirma(trazosVacios);
     onClear();
   };
 
   return (
-    <div className={`signature-pad ${compact ? "signature-pad--compact" : ""}`} ref={wrapperRef}>
+    <div className={`signature-pad ${compact ? "signature-pad--compact" : ""}`} ref={contenedorRef}>
       <Signature
-        key={canvasSize.width}
-        ref={signatureRef}
+        key={tamanoLienzo.width}
+        ref={lienzoRef}
         readonly={false}
-        defaultPoints={points}
-        width={canvasSize.width || undefined}
-        height={canvasSize.height || undefined}
+        defaultPoints={trazosFirma}
+        width={tamanoLienzo.width || undefined}
+        height={tamanoLienzo.height || undefined}
         className={`signature-canvas signature-canvas--dashed ${compact ? "signature-canvas--compact" : ""} ${error ? "field-shell__input--error" : ""}`}
-        onPointer={handlePointer}
-        style={{ width: "100%", height: canvasSize.height ? `${canvasSize.height}px` : compact ? "110px" : "180px" }}
+        onPointer={manejarTrazado}
+        style={{ width: "100%", height: tamanoLienzo.height ? `${tamanoLienzo.height}px` : compact ? "110px" : "180px" }}
       />
-      {value ? (
-        <p className={`signature-status signature-status--success ${compact ? "signature-status--compact" : ""}`}>✓ Firma registrada</p>
-      ) : (
-        <p className={`signature-status ${compact ? "signature-status--compact" : ""}`}>⏳ Pendiente</p>
-      )}
+      {value ? <p className={`signature-status signature-status--success ${compact ? "signature-status--compact" : ""}`}>✓ Firma registrada</p> : null}
       {error ? <p className="field-helper field-helper--error">{error}</p> : null}
-      <Button type="button" variant="secondary" onClick={clearSignature} className={`signature-clear-button ${compact ? "signature-clear-button--compact" : ""}`}>
+      <Button type="button" variant="secondary" onClick={limpiarFirma} className={`signature-clear-button ${compact ? "signature-clear-button--compact" : ""}`}>
         {clearLabel}
       </Button>
     </div>

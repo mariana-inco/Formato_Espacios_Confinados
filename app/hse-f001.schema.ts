@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { definicionesMonitoreo } from "./formulario-config";
 
 const esquemaFecha = z
   .string()
@@ -26,7 +25,7 @@ const textoNumerico = (label: string, minLength = 3) =>
     .min(minLength, `${label} debe tener al menos ${minLength} dígitos`);
 
 const esquemaSeleccionSimple = z.enum(["Seleccione una opción", "Sí", "No"]);
-const esquemaSeleccionTriEstado = z.enum(["Seleccione una opción", "Sí", "No", "NA"]);
+const esquemaSeleccionTriEstado = z.enum(["Seleccione una opción", "NA", "SI", "NO"]);
 
 const esquemaObjetoTrabajador = z.object({
   identificacion: textoNumerico("La identificación", 3),
@@ -64,7 +63,7 @@ const esquemaTomaMonitoreo = z.object({
 });
 
 const esquemaFilaMonitoreo = z.object({
-  takes: z.tuple([esquemaTomaMonitoreo, esquemaTomaMonitoreo]),
+  takes: z.array(esquemaTomaMonitoreo),
 });
 
 export const esquemaFormulario = z

@@ -6,9 +6,9 @@ export const opcionesSiNo = [
 
 export const opcionesTriEstado = [
   { value: "Seleccione una opción", label: "Seleccione una opción" },
-  { value: "Sí", label: "Sí" },
-  { value: "No", label: "No" },
   { value: "NA", label: "NA" },
+  { value: "SI", label: "SI" },
+  { value: "NO", label: "NO" },
 ] as const;
 
 export const rolesAprobacion = [

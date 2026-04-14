@@ -36,6 +36,25 @@ Responsabilidades:
 - Renderiza las tarjetas de trabajadores extra.
 - Maneja la alerta cuando el trabajador no está apto.
 
+### `app/seccion-monitoreo-ambiental.tsx`
+Contiene la sección de monitoreo ambiental del formulario.
+
+Responsabilidades:
+- Renderiza las tarjetas de monitoreo por gas.
+- Controla las tomas individuales (fecha, hora, resultado, firma).
+- Maneja el botón de agregar nuevas tomas.
+- Sincroniza las firmas digitales con el formulario.
+- Muestra la tabla resumen de tomas completas.
+
+### `app/globals.css`
+Contiene los estilos globales del formulario y la aplicación.
+
+Responsabilidades:
+- Estiliza la apariencia general del formulario.
+- Define reglas de layout y responsive.
+- Ajusta la presentación de inputs, tarjetas y botones.
+- Contiene estilos específicos para la sección de monitoreo.
+
 ### `app/hse-f001.schema.ts`
 Contiene el esquema de validación con Zod.
 

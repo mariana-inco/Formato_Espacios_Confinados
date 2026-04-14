@@ -17,9 +17,9 @@ export type NumeroPaso = (typeof sections)[number]["step"];
 
 const valorHoy = new Date().toISOString().slice(0, 10);
 
-function crearDefectosTomaMonitoreo(): ValoresTomaMonitoreo {
+export function crearDefectosTomaMonitoreo(fecha?: string): ValoresTomaMonitoreo {
   return {
-    fecha: valorHoy,
+    fecha: fecha ?? valorHoy,
     hora: "",
     resultado: "",
     signature: "",
@@ -28,7 +28,7 @@ function crearDefectosTomaMonitoreo(): ValoresTomaMonitoreo {
 
 export function crearDefectosFilasMonitoreo(): ValoresFormulario["monitoring"]["rows"] {
   return definicionesMonitoreo.map(() => ({
-    takes: [crearDefectosTomaMonitoreo(), crearDefectosTomaMonitoreo()] as ValoresFilaMonitoreo["takes"],
+    takes: [crearDefectosTomaMonitoreo()] as ValoresFilaMonitoreo["takes"],
   }));
 }
 
@@ -153,21 +153,6 @@ export function obtenerCamposPorPaso(step: NumeroPaso, values: ValoresFormulario
   }
 
   return [];
-}
-
-export function crearDefectosVerificacionSeguridad() {
-  return Object.fromEntries(
-    gruposMedidasSeguridad.flatMap((group) => group.items.map((item) => [item.key, "Seleccione una opción" as ValorTriEstado]))
-  );
-}
-
-export function crearDefectosPersonasAprobacion() {
-  return rolesAprobacion.map((role) => ({
-    role,
-    nombre: "",
-    identificacion: "",
-    signature: "",
-  }));
 }
 
 export function calcularDuracion(inicio: string, fin: string) {
