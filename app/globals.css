@@ -944,6 +944,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .firma-modal {
     padding: 12px;
   }
+
+  .signature-canvas {
+    height: 200px;
+    min-height: 200px;
+  }
+
+  .signature-canvas--compact {
+    height: 140px;
+    min-height: 140px;
+  }
 }
 
 .section-head-inline, .monitor-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
